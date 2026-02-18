@@ -16,14 +16,14 @@ st.markdown("""
 # Sidebar
 with st.sidebar:
     st.title("⚙️ Configurações")
-    modelo = st.selectbox("Modelo", ["gemini-pro", "gemini-1.5-flash-latest", "gemini-1.5-pro-latest"])
+    modelo = st.selectbox("Modelo", ["gemini-1.5-flash", "gemini-1.5-pro"])
     temp = st.slider("Criatividade", 0.0, 2.0, 0.7)
     if st.button("🗑️ Limpar conversa"):
         st.session_state.msgs = []
         st.rerun()
     
     st.divider()
-    st.caption("Powered by Google Gemini")
+    st.caption("Powered by Google Gemini 1.5")
 
 # Verificar e configurar API
 if "GEMINI_API_KEY" not in st.secrets:
@@ -39,7 +39,7 @@ if "msgs" not in st.session_state:
 
 # Título
 st.title("💬 Minha IA Personalizada")
-st.caption("🚀 Conversa inteligente com Gemini")
+st.caption("🚀 Conversa inteligente com Gemini 1.5")
 
 # Mostrar histórico
 for msg in st.session_state.msgs:
@@ -57,28 +57,44 @@ if prompt := st.chat_input("Digite sua mensagem..."):
     with st.chat_message("assistant"):
         with st.spinner("Pensando..."):
             try:
-                model = genai.GenerativeModel(modelo)
+                # Criar modelo com configuração
+                model = genai.GenerativeModel(
+                    model_name=modelo,
+                    generation_config={
+                        "temperature": temp,
+                        "top_p": 0.95,
+                        "top_k": 64,
+                        "max_output_tokens": 8192,
+                    }
+                )
                 
-                # Converter histórico para formato do Gemini
+                # Converter histórico para formato correto
                 history = []
                 for m in st.session_state.msgs[:-1]:
                     role = "user" if m["role"] == "user" else "model"
-                    history.append({"role": role, "parts": [m["content"]]})
+                    history.append({
+                        "role": role,
+                        "parts": [{"text": m["content"]}]
+                    })
                 
                 # Iniciar chat e enviar mensagem
                 chat = model.start_chat(history=history)
-                response = chat.send_message(
-                    prompt,
-                    generation_config=genai.types.GenerationConfig(temperature=temp)
-                )
+                response = chat.send_message(prompt)
                 
                 resposta = response.text
                 st.markdown(resposta)
                 st.session_state.msgs.append({"role": "assistant", "content": resposta})
                 
             except Exception as e:
-                st.error(f"❌ Erro: {str(e)}")
-                if "404" in str(e):
-                    st.warning("Modelo não encontrado. Tente 'gemini-pro'")
-                elif "API" in str(e):
-                    st.warning("Verifique sua chave API em: https://aistudio.google.com/app/apikey")
+                erro = str(e)
+                st.error(f"❌ Erro: {erro}")
+                
+                # Mensagens de ajuda específicas
+                if "404" in erro or "not found" in erro.lower():
+                    st.warning("🔧 **Solução:** O modelo não está disponível na sua região ou API key.")
+                    st.info("✅ Teste criar uma NOVA chave API em: https://aistudio.google.com/app/apikey")
+                elif "quota" in erro.lower() or "limit" in erro.lower():
+                    st.warning("📊 Você atingiu o limite de requisições. Aguarde alguns minutos.")
+                elif "api" in erro.lower():
+                    st.warning("🔑 Problema com a chave API. Verifique se está correta e ativa.")
+                    st.code(st.secrets.get("GEMINI_API_KEY", "Não configurada")[:20] + "...")

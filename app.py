@@ -4,8 +4,7 @@ from datetime import datetime, timedelta
 import json
 import hashlib
 import re
-import pickle
-import os
+import extra_streamlit_components as stx
 
 # Configuração
 st.set_page_config(
@@ -18,8 +17,12 @@ st.set_page_config(
 # CÓDIGO MASTER
 MASTER_CODE = "GuizinhsDono"
 
-# Arquivo para salvar sessões
-SESSION_FILE = "user_sessions.pkl"
+# Gerenciador de cookies
+@st.cache_resource
+def get_cookie_manager():
+    return stx.CookieManager()
+
+cookie_manager = get_cookie_manager()
 
 # CSS
 st.markdown("""
@@ -74,101 +77,63 @@ st.markdown("""
         border-radius: 10px;
         margin: 1rem 0;
     }
-    
-    .code-output {
-        background: #1e1e1e;
-        color: #d4d4d4;
-        padding: 1.5rem;
-        border-radius: 10px;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.9rem;
-        border-left: 4px solid #667eea;
-        max-height: 600px;
-        overflow-y: auto;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# ====== FUNÇÕES DE SALVAMENTO ======
+# ====== FUNÇÕES DE COOKIE ======
 
-def save_session(username, is_master, vip_until):
-    """Salva a sessão do usuário em arquivo"""
+def save_login_cookie(username, is_master, vip_until):
+    """Salva login nos cookies"""
     try:
-        sessions = load_sessions()
-        
-        # Criar ID único do usuário baseado no navegador
-        user_id = hashlib.md5(username.encode()).hexdigest()
-        
-        sessions[user_id] = {
+        login_data = {
             "username": username,
             "is_master": is_master,
             "vip_until": vip_until.isoformat() if vip_until else None,
-            "last_login": datetime.now().isoformat()
+            "saved_at": datetime.now().isoformat()
         }
         
-        with open(SESSION_FILE, 'wb') as f:
-            pickle.dump(sessions, f)
-        
-        # Salvar ID no session state
-        st.session_state.user_id = user_id
-        
+        # Salvar como JSON no cookie (expira em 365 dias)
+        cookie_manager.set(
+            "scriptmaster_login", 
+            json.dumps(login_data),
+            expires_at=datetime.now() + timedelta(days=365)
+        )
         return True
     except Exception as e:
-        st.error(f"Erro ao salvar sessão: {e}")
+        st.warning(f"Aviso: Não foi possível salvar login automaticamente")
         return False
 
-def load_sessions():
-    """Carrega sessões salvas"""
+def load_login_cookie():
+    """Carrega login dos cookies"""
     try:
-        if os.path.exists(SESSION_FILE):
-            with open(SESSION_FILE, 'rb') as f:
-                return pickle.load(f)
-        return {}
-    except:
-        return {}
-
-def load_user_session():
-    """Carrega sessão do usuário atual"""
-    try:
-        if "user_id" in st.session_state:
-            sessions = load_sessions()
-            user_data = sessions.get(st.session_state.user_id)
+        cookies = cookie_manager.get_all()
+        
+        if cookies and "scriptmaster_login" in cookies:
+            login_data = json.loads(cookies["scriptmaster_login"])
             
-            if user_data:
-                # Restaurar dados da sessão
-                st.session_state.username = user_data["username"]
-                st.session_state.is_master = user_data["is_master"]
-                
-                if user_data["vip_until"]:
-                    vip_date = datetime.fromisoformat(user_data["vip_until"])
-                    # Verificar se VIP ainda está válido
-                    if vip_date > datetime.now():
-                        st.session_state.vip_until = vip_date
-                    else:
-                        st.session_state.vip_until = None
-                
-                st.session_state.authenticated = True
-                return True
+            # Restaurar sessão
+            st.session_state.username = login_data["username"]
+            st.session_state.is_master = login_data["is_master"]
+            
+            if login_data["vip_until"]:
+                vip_date = datetime.fromisoformat(login_data["vip_until"])
+                # Verificar se ainda é válido
+                if vip_date > datetime.now():
+                    st.session_state.vip_until = vip_date
+                else:
+                    st.session_state.vip_until = None
+            
+            st.session_state.authenticated = True
+            return True
+        
         return False
-    except:
+    except Exception as e:
         return False
 
-def delete_session():
-    """Deleta a sessão do usuário"""
+def delete_login_cookie():
+    """Remove login dos cookies"""
     try:
-        if "user_id" in st.session_state:
-            sessions = load_sessions()
-            if st.session_state.user_id in sessions:
-                del sessions[st.session_state.user_id]
-                
-                with open(SESSION_FILE, 'wb') as f:
-                    pickle.dump(sessions, f)
-        
-        # Limpar session state
-        for key in ['user_id', 'authenticated', 'is_master', 'vip_until', 'username']:
-            if key in st.session_state:
-                del st.session_state[key]
-        
+        cookie_manager.delete("scriptmaster_login")
         return True
     except:
         return False
@@ -182,18 +147,21 @@ default_states = {
     "current_script": "",
     "saved_scripts": [],
     "created_codes": {},
-    "user_id": None
+    "auto_login_attempted": False
 }
 
 for key, value in default_states.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
-# ====== TENTAR CARREGAR SESSÃO SALVA ======
-if not st.session_state.authenticated:
-    if load_user_session():
-        st.success(f"✅ Bem-vindo de volta, {st.session_state.username}!")
+# ====== TENTAR AUTO-LOGIN (UMA VEZ) ======
+if not st.session_state.authenticated and not st.session_state.auto_login_attempted:
+    st.session_state.auto_login_attempted = True
+    if load_login_cookie():
+        st.success(f"✅ Bem-vindo de volta, {st.session_state.username}! 🎉")
         st.balloons()
+        # Forçar rerun para atualizar interface
+        st.rerun()
 
 # Configurar API
 try:
@@ -222,25 +190,27 @@ if not st.session_state.authenticated:
     <div class="header-premium">
         <h1>🎮 ScriptMaster AI</h1>
         <p style="color: white; font-size: 1.2rem;">Gerador de Scripts e Jogos com IA</p>
-        <p style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">🔐 Login automático ativado - Faça login uma vez e fique conectado!</p>
+        <p style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">🔐 Login automático com cookies - Faça login uma vez!</p>
     </div>
     """, unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("### 🔐 Login")
+        st.markdown("### 🔐 Fazer Login")
         
-        username = st.text_input("👤 Nome", placeholder="Seu nome", key="login_username")
-        access_code = st.text_input("🎫 Código de acesso", type="password", placeholder="MASTER ou código VIP", key="login_code")
+        username = st.text_input("👤 Seu nome", placeholder="Digite seu nome", key="login_username")
+        access_code = st.text_input("🎫 Código de acesso", type="password", placeholder="GuizinhsDono ou código VIP", key="login_code")
         
-        # Checkbox "Manter conectado"
-        keep_logged = st.checkbox("🔒 Manter conectado (recomendado)", value=True)
+        # Checkbox "Lembrar de mim"
+        remember_me = st.checkbox("🔒 Lembrar de mim (login automático)", value=True)
+        
+        st.caption("✅ Seus dados ficam salvos de forma segura no navegador")
         
         col_btn1, col_btn2 = st.columns(2)
         
         with col_btn1:
-            if st.button("🚀 Entrar VIP/MASTER", use_container_width=True):
+            if st.button("🚀 ENTRAR", use_container_width=True, type="primary"):
                 if not username:
                     st.error("❌ Digite seu nome!")
                 elif not access_code:
@@ -252,25 +222,23 @@ if not st.session_state.authenticated:
                     st.session_state.username = username
                     st.session_state.vip_until = None
                     
-                    # Salvar sessão se "Manter conectado" estiver marcado
-                    if keep_logged:
-                        save_session(username, True, None)
+                    # Salvar cookie se marcado
+                    if remember_me:
+                        save_login_cookie(username, True, None)
                     
-                    st.success("✅ MASTER ativado!")
+                    st.success(f"✅ Bem-vindo, MASTER {username}!")
                     st.balloons()
                     st.rerun()
                     
                 elif access_code in st.session_state.created_codes:
-                    # Login com código VIP
+                    # Login VIP
                     code_info = st.session_state.created_codes[access_code]
                     
                     if not code_info.get("used"):
-                        # Marcar código como usado
                         st.session_state.created_codes[access_code]["used"] = True
                         st.session_state.created_codes[access_code]["used_by"] = username
                         st.session_state.created_codes[access_code]["used_at"] = datetime.now().isoformat()
                         
-                        # Ativar VIP
                         days = code_info["days"]
                         vip_until = datetime.now() + timedelta(days=days if days != 999 else 3650)
                         
@@ -279,9 +247,9 @@ if not st.session_state.authenticated:
                         st.session_state.username = username
                         st.session_state.vip_until = vip_until
                         
-                        # Salvar sessão se "Manter conectado" estiver marcado
-                        if keep_logged:
-                            save_session(username, False, vip_until)
+                        # Salvar cookie
+                        if remember_me:
+                            save_login_cookie(username, False, vip_until)
                         
                         dias_texto = "ILIMITADO" if days == 999 else f"{days} dias"
                         st.success(f"✅ VIP ativado por {dias_texto}!")
@@ -294,271 +262,256 @@ if not st.session_state.authenticated:
         
         with col_btn2:
             if st.button("🆓 Modo Grátis", use_container_width=True):
-                if not username:
-                    username = "Visitante"
+                username_final = username if username else "Visitante"
                 
                 st.session_state.authenticated = True
-                st.session_state.username = username
+                st.session_state.username = username_final
                 st.session_state.is_master = False
                 st.session_state.vip_until = None
                 
-                # Salvar sessão gratuita se marcado
-                if keep_logged:
-                    save_session(username, False, None)
+                # Salvar cookie se marcado
+                if remember_me:
+                    save_login_cookie(username_final, False, None)
                 
-                st.info("ℹ️ Modo gratuito ativado")
+                st.info(f"ℹ️ Modo gratuito ativado para {username_final}")
                 st.rerun()
         
         st.divider()
         
-        # Informações sobre login persistente
         st.info("""
-        ℹ️ **Login Automático:**
-        - ✅ Marque "Manter conectado" para não precisar fazer login novamente
-        - ✅ Seus dados ficam salvos de forma segura
-        - ✅ Funciona mesmo se você fechar o navegador
-        - 🔒 Use "Sair" no menu para desconectar
+        💡 **Como funciona o login automático:**
+        
+        ✅ Marque "Lembrar de mim" ao fazer login
+        
+        ✅ Seus dados ficam salvos nos cookies do navegador
+        
+        ✅ Na próxima vez, você entra automaticamente
+        
+        ✅ Funciona mesmo fechando o navegador
+        
+        🔒 Para sair, use o botão "Sair" no menu lateral
         """)
     
     with col2:
-        st.markdown("### 🎯 O que você pode criar:")
+        st.markdown("### 🎯 Recursos Disponíveis")
         st.markdown("""
-        **🎮 Jogos Completos:**
+        **🎮 Criar Jogos:**
         - Godot 4.6 (GDScript/C#)
         - Unity (C#)
         - HTML5 (Phaser, Canvas)
         - React Native Mobile
         
-        **💻 Scripts Profissionais:**
+        **💻 Gerar Scripts:**
         - Python (Bot, Scraper, API)
         - JavaScript/Node.js
         - Discord/Telegram Bots
         - SQL, Bash, PowerShell
         
-        **👑 RECURSOS VIP:**
-        - ✅ Geração ilimitada de código
-        - ✅ Salvar scripts permanentemente
-        - ✅ Templates avançados
-        - ✅ Suporte prioritário
+        **🆓 MODO GRATUITO:**
+        - ✅ Geração básica de código
+        - ✅ Templates simples
+        - ⚠️ Limite de uso
         
-        **🔥 MASTER:**
-        - ✅ Criar códigos VIP ilimitados
-        - ✅ Painel de administração
-        - ✅ Acesso vitalício total
+        **👑 MODO VIP:**
+        - ✅ Geração ILIMITADA
+        - ✅ TODOS os templates
+        - ✅ Salvar scripts
+        - ✅ Sem anúncios
+        
+        **🔥 MODO MASTER:**
+        - ✅ Tudo do VIP
+        - ✅ Criar códigos VIP
+        - ✅ Painel admin
+        - ✅ Acesso total
         """)
         
         st.divider()
         
-        st.markdown("### 💡 Como conseguir acesso VIP:")
-        st.code("Código MASTER: GuizinhsDono", language=None)
-        st.caption("(Use este código para acesso total)")
+        st.markdown("### 🎁 Código MASTER")
+        st.code("GuizinhsDono", language=None)
+        st.caption("Use este código para acesso MASTER total")
     
     st.stop()
 
-# ====== SIDEBAR (QUANDO LOGADO) ======
+# ====== SIDEBAR (LOGADO) ======
 with st.sidebar:
-    # Mensagem de boas-vindas
+    # Boas-vindas
     st.markdown(f"""
     <div class="welcome-box">
         <h3 style="margin:0;">👋 Olá, {st.session_state.username}!</h3>
         <p style="margin:0.5rem 0 0 0; font-size: 0.9rem;">
-            🔐 Você está conectado automaticamente
+            ✅ Login salvo automaticamente
         </p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Badge de status
+    # Badge
     if st.session_state.is_master:
-        st.markdown('<div class="master-badge">🔥 MASTER - ACESSO TOTAL</div>', unsafe_allow_html=True)
+        st.markdown('<div class="master-badge">🔥 MASTER</div>', unsafe_allow_html=True)
         
         st.divider()
         st.markdown("### 🎫 Criar Códigos VIP")
         
         with st.expander("➕ Novo Código"):
-            novo_codigo = st.text_input("📝 Nome do código", key="new_code", placeholder="Ex: VIP2024")
+            novo_codigo = st.text_input("📝 Nome", key="new_code", placeholder="VIP2024")
             tipo = st.selectbox("⏱️ Duração", ["1 dia", "7 dias", "30 dias", "Ilimitado"])
             
-            if st.button("✨ Gerar Código", use_container_width=True):
-                if novo_codigo:
-                    if novo_codigo not in st.session_state.created_codes:
-                        days_map = {"1 dia": 1, "7 dias": 7, "30 dias": 30, "Ilimitado": 999}
-                        st.session_state.created_codes[novo_codigo] = {
-                            "days": days_map[tipo],
-                            "created_at": datetime.now().isoformat(),
-                            "used": False
-                        }
-                        st.success(f"✅ Código '{novo_codigo}' criado!")
-                        st.code(novo_codigo, language=None)
-                    else:
-                        st.error("❌ Código já existe!")
-                else:
-                    st.error("❌ Digite um nome para o código!")
+            if st.button("✨ Gerar", use_container_width=True):
+                if novo_codigo and novo_codigo not in st.session_state.created_codes:
+                    days_map = {"1 dia": 1, "7 dias": 7, "30 dias": 30, "Ilimitado": 999}
+                    st.session_state.created_codes[novo_codigo] = {
+                        "days": days_map[tipo],
+                        "created_at": datetime.now().isoformat(),
+                        "used": False
+                    }
+                    st.success("✅ Código criado!")
+                    st.code(novo_codigo)
         
         if st.session_state.created_codes:
-            st.markdown("### 📋 Códigos Ativos")
+            st.markdown("### 📋 Códigos")
             for code, info in list(st.session_state.created_codes.items())[:10]:
-                status = "✅ USADO" if info.get("used") else "🎫 ATIVO"
-                days_text = "♾️" if info["days"] == 999 else f"{info['days']}d"
-                usado_por = f" ({info.get('used_by', 'N/A')})" if info.get("used") else ""
-                st.text(f"{status[:2]} {code} ({days_text}){usado_por}")
+                status = "✅" if info.get("used") else "🎫"
+                days = "♾️" if info["days"] == 999 else f"{info['days']}d"
+                user = f" ({info.get('used_by', '')})" if info.get("used") else ""
+                st.text(f"{status} {code} {days}{user}")
         
         st.divider()
     
     elif is_vip_active():
         dias = (st.session_state.vip_until - datetime.now()).days
-        st.markdown(f'<div class="vip-badge">👑 VIP - {dias} dias restantes</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="vip-badge">👑 VIP - {dias}d</div>', unsafe_allow_html=True)
         st.divider()
     else:
-        st.info("🆓 Modo Gratuito - Faça upgrade para VIP!")
+        st.info("🆓 Modo Gratuito")
         st.divider()
     
-    # Botão de logout com confirmação
-    if st.button("🚪 Sair da Conta", use_container_width=True, type="secondary"):
-        # Deletar sessão salva
-        delete_session()
+    # BOTÃO SAIR
+    if st.button("🚪 SAIR DA CONTA", use_container_width=True, type="secondary"):
+        # Limpar cookie
+        delete_login_cookie()
+        
+        # Limpar session
+        for key in ['authenticated', 'is_master', 'vip_until', 'username', 'auto_login_attempted']:
+            if key in st.session_state:
+                st.session_state[key] = False if key != 'auto_login_attempted' else False
+        
         st.success("✅ Você saiu com sucesso!")
-        st.info("ℹ️ Recarregando...")
+        st.info("🔄 Recarregando...")
         st.rerun()
     
-    st.caption("💡 Suas preferências foram salvas automaticamente")
+    st.caption("💾 Seu login está salvo nos cookies")
     
     st.divider()
     
-    # Templates rápidos
-    st.markdown("### 📚 Templates Rápidos")
+    # Templates
+    st.markdown("### 📚 Templates")
     
     templates = {
-        "🎮 Godot - Jogo Mobile": "godot_mobile",
-        "🌐 HTML5 - Jogo Canvas": "html5_game",
-        "🐍 Python - Web Scraper": "python_scraper",
-        "🤖 Discord Bot": "discord_bot",
-        "📱 React Native Game": "react_native",
-        "💾 SQL - Database": "sql_db",
-        "🐚 Bash - Deploy Script": "bash_deploy"
+        "🎮 Godot Mobile": "godot",
+        "🌐 HTML5 Game": "html5",
+        "🐍 Web Scraper": "scraper",
+        "🤖 Discord Bot": "discord",
+        "📱 React Native": "react"
     }
     
     for name, key in templates.items():
         if st.button(name, use_container_width=True, key=f"temp_{key}"):
-            st.session_state.selected_template = key
-            st.rerun()
+            st.info(f"Template {name} selecionado!")
     
     st.divider()
     
     # Scripts salvos
     if st.session_state.saved_scripts:
-        st.markdown("### 💾 Scripts Salvos")
+        st.markdown("### 💾 Salvos")
         for idx, script in enumerate(st.session_state.saved_scripts[-5:]):
             if st.button(f"📄 {script['name']}", key=f"saved_{idx}", use_container_width=True):
                 st.session_state.current_script = script['code']
                 st.rerun()
     
-    st.divider()
-    st.caption(f"📊 {len(st.session_state.saved_scripts)} scripts salvos")
-    st.caption(f"⏰ Último login: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    st.caption(f"📊 {len(st.session_state.saved_scripts)} scripts")
 
 # ====== ÁREA PRINCIPAL ======
 
 st.markdown("""
 <div class="header-premium">
     <h1>🎮 ScriptMaster AI</h1>
-    <p style="color: white;">Gerador Profissional de Scripts e Jogos</p>
+    <p style="color: white;">Gerador de Scripts e Jogos com IA</p>
 </div>
 """, unsafe_allow_html=True)
 
-# Tabs principais
-tab1, tab2, tab3 = st.tabs(["🤖 Gerar Script", "💻 Editor", "📚 Biblioteca"])
+tab1, tab2, tab3 = st.tabs(["🤖 Gerar", "💻 Editor", "📚 Biblioteca"])
 
-# ====== TAB 1: GERAR SCRIPT ======
+# TAB 1: GERAR
 with tab1:
-    st.markdown("### 🎯 Descreva o que você precisa")
+    st.markdown("### 🎯 O que você quer criar?")
     
     col1, col2 = st.columns([3, 1])
     
     with col1:
         user_prompt = st.text_area(
-            "📝 Descrição completa:",
-            placeholder="Ex: Crie um jogo endless runner em Godot 4.6 para mobile com controles touch, sistema de score e obstáculos aleatórios",
+            "📝 Descrição:",
+            placeholder="Ex: Crie um jogo de plataforma em Godot 4.6",
             height=150,
             key="user_input"
         )
     
     with col2:
         tipo_codigo = st.selectbox(
-            "🔤 Tipo de código",
+            "🔤 Tipo",
             [
                 "Godot 4.6 (GDScript)",
-                "Godot 4.6 (C#)",
                 "Unity (C#)",
-                "HTML5 - Phaser 3",
-                "HTML5 - Canvas Puro",
-                "React Native",
+                "HTML5 - Canvas",
                 "Python Script",
-                "JavaScript/Node.js",
+                "JavaScript",
                 "Discord Bot",
-                "Telegram Bot",
-                "SQL Database",
-                "Bash Script"
+                "SQL Database"
             ]
         )
         
-        complexidade = st.select_slider(
-            "📊 Nível",
-            ["Básico", "Intermediário", "Avançado", "Expert"]
-        )
+        nivel = st.select_slider("📊 Nível", ["Básico", "Médio", "Avançado"])
     
-    # BOTÃO GERAR
-    if st.button("⚡ GERAR CÓDIGO AGORA", use_container_width=True, type="primary"):
+    if st.button("⚡ GERAR CÓDIGO", use_container_width=True, type="primary"):
         if not user_prompt:
-            st.error("❌ Escreva o que você precisa!")
+            st.error("❌ Descreva o que você quer!")
         else:
-            with st.spinner("🔮 Gerando seu código... Aguarde..."):
+            with st.spinner("🔮 Gerando..."):
                 try:
                     modelos = get_models()
                     if not modelos:
-                        st.error("❌ Nenhum modelo disponível!")
+                        st.error("❌ API indisponível!")
                         st.stop()
                     
-                    modelo = modelos[0]
-                    model = genai.GenerativeModel(modelo)
+                    model = genai.GenerativeModel(modelos[0])
                     
-                    prompt_sistema = f"""
-Você é um programador EXPERT em {tipo_codigo}.
+                    prompt = f"""
+Crie código {tipo_codigo} COMPLETO e FUNCIONAL.
 
-TAREFA: Criar código COMPLETO e FUNCIONAL baseado nesta descrição:
-{user_prompt}
+Descrição: {user_prompt}
+Nível: {nivel}
 
-NÍVEL DE COMPLEXIDADE: {complexidade}
+Regras:
+1. Código COMPLETO pronto para usar
+2. Comentários explicativos
+3. Boas práticas
+4. SEM markdown, APENAS código
 
-REGRAS OBRIGATÓRIAS:
-1. Código COMPLETO, pronto para usar
-2. Adicione comentários explicativos
-3. Use boas práticas da linguagem
-4. Inclua tratamento de erros
-5. Se for jogo, adicione controles funcionais
-6. Se for mobile, otimize para touch
-7. NÃO adicione explicações fora do código
-8. Retorne APENAS o código puro
-
-FORMATO DE SAÍDA:
-Retorne o código diretamente, SEM usar ``` ou markdown.
-Comece direto com o código.
+Retorne o código diretamente:
 """
                     
-                    response = model.generate_content(prompt_sistema)
-                    codigo_gerado = response.text
+                    response = model.generate_content(prompt)
+                    codigo = response.text
                     
-                    codigo_gerado = re.sub(r'```[\w]*\n?', '', codigo_gerado)
-                    codigo_gerado = codigo_gerado.replace('```', '')
-                    codigo_gerado = codigo_gerado.strip()
+                    codigo = re.sub(r'```[\w]*\n?', '', codigo)
+                    codigo = codigo.replace('```', '').strip()
                     
-                    st.session_state.current_script = codigo_gerado
+                    st.session_state.current_script = codigo
                     
-                    st.success("✅ Código gerado com sucesso!")
+                    st.success("✅ Código gerado!")
                     st.balloons()
                     
-                    st.markdown("### 📄 Código Gerado:")
-                    
-                    if "Godot" in tipo_codigo or "GDScript" in tipo_codigo:
+                    # Detectar linguagem
+                    if "Godot" in tipo_codigo:
                         lang = "gdscript"
                     elif "Unity" in tipo_codigo or "C#" in tipo_codigo:
                         lang = "csharp"
@@ -566,130 +519,99 @@ Comece direto com o código.
                         lang = "html"
                     elif "Python" in tipo_codigo:
                         lang = "python"
-                    elif "JavaScript" in tipo_codigo or "Discord" in tipo_codigo or "Telegram" in tipo_codigo:
-                        lang = "javascript"
                     elif "SQL" in tipo_codigo:
                         lang = "sql"
-                    elif "Bash" in tipo_codigo:
-                        lang = "bash"
                     else:
-                        lang = "python"
+                        lang = "javascript"
                     
-                    st.code(codigo_gerado, language=lang)
+                    st.markdown("### 📄 Código:")
+                    st.code(codigo, language=lang)
                     
                     col_a, col_b, col_c = st.columns(3)
                     
                     with col_a:
                         st.download_button(
-                            "📥 Download Código",
-                            data=codigo_gerado,
-                            file_name=f"script_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{lang}",
-                            mime="text/plain",
+                            "📥 Download",
+                            data=codigo,
+                            file_name=f"script.{lang}",
                             use_container_width=True
                         )
                     
                     with col_b:
-                        if st.button("💾 Salvar na Biblioteca", use_container_width=True):
-                            nome_auto = f"Script_{len(st.session_state.saved_scripts)+1}"
+                        if st.button("💾 Salvar", use_container_width=True):
                             st.session_state.saved_scripts.append({
-                                "name": nome_auto,
-                                "code": codigo_gerado,
+                                "name": f"Script_{len(st.session_state.saved_scripts)+1}",
+                                "code": codigo,
                                 "language": lang,
                                 "created_at": datetime.now().isoformat()
                             })
-                            st.success("✅ Salvo na biblioteca!")
+                            st.success("✅ Salvo!")
                             st.rerun()
                     
                     with col_c:
-                        if st.button("✏️ Editar no Editor", use_container_width=True):
-                            st.info("👉 Vá para a aba 'Editor'!")
+                        if st.button("✏️ Editar", use_container_width=True):
+                            st.info("👉 Vá para 'Editor'")
                     
                 except Exception as e:
                     st.error(f"❌ Erro: {str(e)}")
-                    st.info("💡 Tente descrever de forma mais simples")
 
-# ====== TAB 2: EDITOR ======
+# TAB 2: EDITOR
 with tab2:
-    st.markdown("### 💻 Editor de Código")
-    
     if st.session_state.current_script:
-        col1, col2, col3, col4 = st.columns(4)
+        st.markdown("### 💻 Editor")
+        
+        col1, col2, col3 = st.columns(3)
         
         with col1:
-            nome_arquivo = st.text_input("📝 Nome", value="meu_script", key="filename")
+            nome = st.text_input("📝 Nome", value="script", key="fname")
         
         with col2:
-            extensao = st.text_input("📄 Ext", value=".py", key="ext")
+            ext = st.text_input("📄 Ext", value=".py", key="fext")
         
         with col3:
-            if st.button("💾 Salvar", use_container_width=True):
-                st.session_state.saved_scripts.append({
-                    "name": f"{nome_arquivo}{extensao}",
-                    "code": st.session_state.current_script,
-                    "language": "python",
-                    "created_at": datetime.now().isoformat()
-                })
-                st.success("✅ Salvo!")
-                st.rerun()
-        
-        with col4:
             st.download_button(
                 "📥 Download",
                 data=st.session_state.current_script,
-                file_name=f"{nome_arquivo}{extensao}",
+                file_name=f"{nome}{ext}",
                 use_container_width=True
             )
         
-        codigo_editado = st.text_area(
-            "Edite seu código:",
+        codigo_edit = st.text_area(
+            "Código:",
             value=st.session_state.current_script,
             height=500,
-            key="code_editor"
+            key="editor"
         )
         
-        if codigo_editado != st.session_state.current_script:
-            st.session_state.current_script = codigo_editado
+        st.session_state.current_script = codigo_edit
         
         st.markdown("### 👁️ Preview")
-        st.code(st.session_state.current_script, language="python")
-        
+        st.code(codigo_edit, language="python")
     else:
         st.info("👈 Gere um código primeiro!")
 
-# ====== TAB 3: BIBLIOTECA ======
+# TAB 3: BIBLIOTECA
 with tab3:
-    st.markdown("### 📚 Biblioteca de Scripts")
-    
     if st.session_state.saved_scripts:
-        for idx, script in enumerate(reversed(st.session_state.saved_scripts)):
-            with st.expander(f"📄 {script['name']} - {datetime.fromisoformat(script['created_at']).strftime('%d/%m/%Y %H:%M')}"):
-                st.code(script['code'], language=script.get('language', 'python'))
+        st.markdown("### 📚 Scripts Salvos")
+        for idx, s in enumerate(reversed(st.session_state.saved_scripts)):
+            with st.expander(f"📄 {s['name']}"):
+                st.code(s['code'], language=s.get('language', 'python'))
                 
                 col1, col2, col3 = st.columns(3)
-                
                 with col1:
-                    st.download_button(
-                        "📥 Download",
-                        data=script['code'],
-                        file_name=script['name'],
-                        key=f"download_{idx}",
-                        use_container_width=True
-                    )
-                
+                    st.download_button("📥", data=s['code'], file_name=s['name'], key=f"dl{idx}")
                 with col2:
-                    if st.button("📋 Copiar", key=f"copy_{idx}", use_container_width=True):
-                        st.session_state.current_script = script['code']
+                    if st.button("📋", key=f"cp{idx}"):
+                        st.session_state.current_script = s['code']
                         st.success("✅ Copiado!")
                         st.rerun()
-                
                 with col3:
-                    if st.button("🗑️ Deletar", key=f"delete_{idx}", use_container_width=True):
-                        real_idx = len(st.session_state.saved_scripts) - 1 - idx
-                        st.session_state.saved_scripts.pop(real_idx)
-                        st.success("✅ Deletado!")
+                    if st.button("🗑️", key=f"del{idx}"):
+                        st.session_state.saved_scripts.pop(len(st.session_state.saved_scripts)-1-idx)
                         st.rerun()
     else:
-        st.info("📭 Nenhum script salvo ainda!")
+        st.info("📭 Nenhum script salvo")
 
 # Rodapé
 st.markdown("---")
@@ -697,17 +619,10 @@ col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.metric("📊 Scripts", len(st.session_state.saved_scripts))
-
 with col2:
-    status = "👑 VIP" if is_vip_active() else "🆓 FREE"
-    st.metric("⚡ Status", status)
-
+    st.metric("⚡ Status", "VIP" if is_vip_active() else "FREE")
 with col3:
     if st.session_state.current_script:
-        linhas = len(st.session_state.current_script.split('\n'))
-        st.metric("📏 Linhas", linhas)
-    else:
-        st.metric("📏 Linhas", 0)
-
+        st.metric("📏 Linhas", len(st.session_state.current_script.split('\n')))
 with col4:
-    st.metric("🔐 Login", "Salvo")
+    st.metric("🔐 Login", "Salvo ✅")

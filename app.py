@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CÓDIGO MASTER
+# CÓDIGO MASTER (SECRETO - NÃO MOSTRAR)
 MASTER_CODE = "GuizinhsDono"
 
 # CSS
@@ -66,6 +66,14 @@ st.markdown("""
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         padding: 1rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+    }
+    
+    .vip-info {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: white;
+        padding: 1.5rem;
         border-radius: 10px;
         margin: 1rem 0;
     }
@@ -179,32 +187,34 @@ if not st.session_state.authenticated:
     st.markdown("""
     <div class="header-premium">
         <h1>🎮 ScriptMaster AI</h1>
-        <p style="color: white; font-size: 1.2rem;">Gerador de Scripts e Jogos com IA</p>
-        <p style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">🔐 Login automático - Salve o link para entrar automaticamente!</p>
+        <p style="color: white; font-size: 1.2rem;">Gerador Profissional de Scripts e Jogos com IA</p>
+        <p style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">🔐 Login automático - Salve seus favoritos!</p>
     </div>
     """, unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.markdown("### 🔐 Fazer Login")
+        st.markdown("### 🔐 Entrar no Sistema")
         
         username = st.text_input("👤 Seu nome", placeholder="Digite seu nome", key="login_username")
-        access_code = st.text_input("🎫 Código de acesso", type="password", placeholder="GuizinhsDono ou código VIP", key="login_code")
+        access_code = st.text_input("🎫 Código de acesso VIP", type="password", placeholder="Cole seu código VIP aqui", key="login_code")
         
         # Checkbox lembrar
-        remember = st.checkbox("🔒 Manter conectado (salvar na URL)", value=True)
+        remember = st.checkbox("🔒 Manter conectado (recomendado)", value=True)
+        
+        st.caption("💡 Marque para entrar automaticamente na próxima vez")
         
         col_btn1, col_btn2 = st.columns(2)
         
         with col_btn1:
-            if st.button("🚀 ENTRAR", use_container_width=True, type="primary"):
+            if st.button("🚀 ENTRAR COM CÓDIGO VIP", use_container_width=True, type="primary"):
                 if not username:
                     st.error("❌ Digite seu nome!")
                 elif not access_code:
-                    st.error("❌ Digite o código!")
+                    st.error("❌ Digite o código de acesso!")
                 elif access_code == MASTER_CODE:
-                    # MASTER
+                    # MASTER (SECRETO)
                     st.session_state.authenticated = True
                     st.session_state.is_master = True
                     st.session_state.username = username
@@ -213,7 +223,7 @@ if not st.session_state.authenticated:
                     if remember:
                         save_login(username, True, None)
                     
-                    st.success(f"✅ MASTER {username} ativado!")
+                    st.success(f"✅ Bem-vindo, {username}! Acesso MASTER concedido!")
                     st.balloons()
                     st.rerun()
                     
@@ -224,6 +234,7 @@ if not st.session_state.authenticated:
                     if not code_info.get("used"):
                         st.session_state.created_codes[access_code]["used"] = True
                         st.session_state.created_codes[access_code]["used_by"] = username
+                        st.session_state.created_codes[access_code]["used_at"] = datetime.now().isoformat()
                         
                         days = code_info["days"]
                         vip_until = datetime.now() + timedelta(days=days if days != 999 else 3650)
@@ -236,14 +247,16 @@ if not st.session_state.authenticated:
                         if remember:
                             save_login(username, False, vip_until)
                         
-                        dias_txt = "ILIMITADO" if days == 999 else f"{days} dias"
+                        dias_txt = "ILIMITADO ♾️" if days == 999 else f"{days} dias"
                         st.success(f"✅ VIP ativado por {dias_txt}!")
                         st.balloons()
                         st.rerun()
                     else:
-                        st.error("❌ Código já usado!")
+                        st.error("❌ Este código já foi usado anteriormente!")
+                        st.info("💡 Solicite um novo código VIP")
                 else:
-                    st.error("❌ Código inválido!")
+                    st.error("❌ Código inválido ou expirado!")
+                    st.warning("💡 Verifique se digitou corretamente ou solicite um novo código")
         
         with col_btn2:
             if st.button("🆓 Modo Grátis", use_container_width=True):
@@ -257,51 +270,89 @@ if not st.session_state.authenticated:
                 if remember:
                     save_login(nome, False, None)
                 
-                st.info(f"ℹ️ Modo grátis para {nome}")
+                st.info(f"ℹ️ Modo gratuito ativado para {nome}")
                 st.rerun()
         
         st.divider()
         
         st.success("""
-        💡 **Login Automático:**
+        ✅ **Login Automático Ativado:**
         
-        ✅ Marque "Manter conectado"
+        🔒 Marque "Manter conectado"
         
-        ✅ Salve o link/favorito do navegador
+        📌 Salve esta página nos favoritos
         
-        ✅ Ao abrir o link, entra automaticamente!
+        🚀 Na próxima vez, entre automaticamente!
+        
+        💾 Seus dados ficam salvos de forma segura
         """)
     
     with col2:
-        st.markdown("### 🎯 Recursos")
+        st.markdown("### 🎯 Recursos Disponíveis")
+        
+        # Modo Gratuito
         st.markdown("""
-        **🎮 Criar Jogos:**
-        - Godot 4.6 (GDScript)
-        - Unity (C#)
-        - HTML5 Canvas/Phaser
-        - React Native
-        
-        **💻 Scripts:**
-        - Python (Bot, API, Scraper)
-        - JavaScript/Node.js
-        - Discord/Telegram Bot
-        - SQL, Bash
-        
-        **👑 VIP:**
-        - Geração ilimitada
-        - Todos os templates
-        - Salvar scripts
-        
-        **🔥 MASTER:**
-        - Tudo do VIP
-        - Criar códigos VIP
-        - Painel admin
+        **🆓 MODO GRATUITO:**
+        - ✅ Geração básica de código
+        - ✅ Templates simples
+        - ✅ Editar e baixar scripts
+        - ⚠️ Limite de uso diário
         """)
         
         st.divider()
         
-        st.markdown("### 🎁 Código MASTER:")
-        st.code("GuizinhsDono", language=None)
+        # Modo VIP
+        st.markdown("""
+        <div class="vip-info">
+            <h3 style="margin:0; color: white;">👑 MODO VIP</h3>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.95rem;">
+                ✅ Geração ILIMITADA de código<br>
+                ✅ TODOS os templates premium<br>
+                ✅ Salvar scripts permanentemente<br>
+                ✅ Suporte prioritário<br>
+                ✅ Sem anúncios<br>
+                ✅ Novos recursos exclusivos
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.divider()
+        
+        # Tipos de código
+        st.markdown("### 💻 O que você pode criar:")
+        st.markdown("""
+        **🎮 Jogos:**
+        - Godot 4.6 (GDScript/C#)
+        - Unity (C#)
+        - HTML5 (Phaser, Canvas)
+        - React Native Mobile
+        
+        **🤖 Bots:**
+        - Discord Bot
+        - Telegram Bot
+        - WhatsApp Bot
+        
+        **💾 Scripts:**
+        - Python (Web Scraper, API, Automação)
+        - JavaScript/Node.js
+        - SQL Database
+        - Bash/PowerShell
+        """)
+        
+        st.divider()
+        
+        # Como conseguir VIP
+        st.info("""
+        **🎁 Como conseguir acesso VIP?**
+        
+        📧 Entre em contato para solicitar seu código VIP
+        
+        🎫 Códigos podem ter diferentes durações:
+        - 1 dia (teste)
+        - 7 dias
+        - 30 dias
+        - Ilimitado ♾️
+        """)
     
     st.stop()
 
@@ -309,24 +360,24 @@ if not st.session_state.authenticated:
 with st.sidebar:
     st.markdown(f"""
     <div class="welcome-box">
-        <h3 style="margin:0;">👋 {st.session_state.username}</h3>
+        <h3 style="margin:0;">👋 Olá, {st.session_state.username}!</h3>
         <p style="margin:0.5rem 0 0 0; font-size: 0.9rem;">
-            ✅ Logado automaticamente
+            ✅ Login salvo automaticamente
         </p>
     </div>
     """, unsafe_allow_html=True)
     
     if st.session_state.is_master:
-        st.markdown('<div class="master-badge">🔥 MASTER</div>', unsafe_allow_html=True)
+        st.markdown('<div class="master-badge">🔥 ADMINISTRADOR</div>', unsafe_allow_html=True)
         
         st.divider()
-        st.markdown("### 🎫 Criar Códigos")
+        st.markdown("### 🎫 Painel de Códigos VIP")
         
-        with st.expander("➕ Novo Código"):
-            novo_codigo = st.text_input("📝 Nome", key="new_code", placeholder="VIP2024")
-            tipo = st.selectbox("⏱️ Duração", ["1 dia", "7 dias", "30 dias", "Ilimitado"])
+        with st.expander("➕ Criar Novo Código VIP", expanded=False):
+            novo_codigo = st.text_input("📝 Nome do código", key="new_code", placeholder="Ex: VIP2024")
+            tipo = st.selectbox("⏱️ Duração do acesso", ["1 dia", "7 dias", "30 dias", "Ilimitado"])
             
-            if st.button("✨ Criar", use_container_width=True):
+            if st.button("✨ Gerar Código", use_container_width=True):
                 if novo_codigo and novo_codigo not in st.session_state.created_codes:
                     days_map = {"1 dia": 1, "7 dias": 7, "30 dias": 30, "Ilimitado": 999}
                     st.session_state.created_codes[novo_codigo] = {
@@ -334,67 +385,110 @@ with st.sidebar:
                         "created_at": datetime.now().isoformat(),
                         "used": False
                     }
-                    st.success("✅ Criado!")
-                    st.code(novo_codigo)
+                    st.success("✅ Código VIP criado com sucesso!")
+                    st.code(novo_codigo, language=None)
+                    st.info("💡 Compartilhe este código com o usuário")
+                elif novo_codigo in st.session_state.created_codes:
+                    st.error("❌ Este código já existe!")
+                else:
+                    st.error("❌ Digite um nome para o código!")
         
         if st.session_state.created_codes:
-            st.markdown("### 📋 Códigos")
-            for code, info in list(st.session_state.created_codes.items())[:10]:
-                status = "✅" if info.get("used") else "🎫"
-                days = "♾️" if info["days"] == 999 else f"{info['days']}d"
-                st.text(f"{status} {code} ({days})")
+            st.markdown("### 📋 Códigos Criados")
+            
+            total_codes = len(st.session_state.created_codes)
+            used_codes = sum(1 for c in st.session_state.created_codes.values() if c.get("used"))
+            
+            st.metric("Total de Códigos", total_codes)
+            st.metric("Códigos Usados", used_codes)
+            st.metric("Disponíveis", total_codes - used_codes)
+            
+            st.divider()
+            
+            for code, info in list(st.session_state.created_codes.items())[:15]:
+                status = "✅ USADO" if info.get("used") else "🎫 ATIVO"
+                days_icon = "♾️" if info["days"] == 999 else f"{info['days']}d"
+                user_info = f" por {info.get('used_by', 'N/A')}" if info.get("used") else ""
+                
+                with st.expander(f"{status[:2]} {code} ({days_icon})"):
+                    st.markdown(f"**Status:** {status}")
+                    st.markdown(f"**Duração:** {days_icon}")
+                    st.markdown(f"**Criado em:** {datetime.fromisoformat(info['created_at']).strftime('%d/%m/%Y %H:%M')}")
+                    
+                    if info.get("used"):
+                        st.markdown(f"**Usado por:** {info.get('used_by', 'Desconhecido')}")
+                        st.markdown(f"**Usado em:** {datetime.fromisoformat(info['used_at']).strftime('%d/%m/%Y %H:%M')}")
+                    else:
+                        st.code(code, language=None)
+                        if st.button("🗑️ Deletar Código", key=f"del_code_{code}"):
+                            del st.session_state.created_codes[code]
+                            st.success("✅ Código deletado!")
+                            st.rerun()
         
         st.divider()
     
     elif is_vip_active():
-        dias = (st.session_state.vip_until - datetime.now()).days
-        st.markdown(f'<div class="vip-badge">👑 VIP - {dias}d</div>', unsafe_allow_html=True)
+        dias_restantes = (st.session_state.vip_until - datetime.now()).days
+        st.markdown(f'<div class="vip-badge">👑 VIP ATIVO - {dias_restantes} dias</div>', unsafe_allow_html=True)
         st.divider()
     else:
-        st.info("🆓 Modo Grátis")
+        st.info("🆓 Modo Gratuito Ativo")
+        st.caption("Faça upgrade para VIP e tenha acesso ilimitado!")
         st.divider()
     
-    # SAIR
-    if st.button("🚪 SAIR", use_container_width=True, type="secondary"):
+    # BOTÃO SAIR
+    if st.button("🚪 SAIR DA CONTA", use_container_width=True, type="secondary"):
         clear_login()
         st.session_state.authenticated = False
         st.session_state.login_checked = False
-        st.success("✅ Saiu!")
+        st.success("✅ Você saiu com sucesso!")
+        st.info("🔄 Redirecionando para login...")
         st.rerun()
     
-    st.caption("💾 Salve o link para login automático!")
+    st.caption("💾 Seus dados estão salvos de forma segura")
     
     st.divider()
     
     # Templates
-    st.markdown("### 📚 Templates")
+    st.markdown("### 📚 Templates Prontos")
     
     templates_code = {
-        "🎮 Godot Mobile": '''extends CharacterBody2D
+        "🎮 Godot - Player Mobile": '''extends CharacterBody2D
 
 const SPEED = 300.0
 const JUMP = -400.0
 var gravity = 980
 
 func _physics_process(delta):
+    # Gravidade
     if not is_on_floor():
         velocity.y += gravity * delta
     
+    # Pulo (toque na tela)
     if Input.is_action_just_pressed("jump") and is_on_floor():
         velocity.y = JUMP
     
+    # Movimento horizontal
     var direction = Input.get_axis("left", "right")
     velocity.x = direction * SPEED
     
     move_and_slide()
 ''',
-        "🌐 HTML5 Game": '''<!DOCTYPE html>
+        "🌐 HTML5 - Jogo Canvas": '''<!DOCTYPE html>
 <html>
 <head>
     <title>Meu Jogo</title>
     <style>
-        canvas { border: 2px solid #333; display: block; margin: auto; }
-        body { background: #1a1a1a; }
+        canvas { 
+            border: 3px solid #333; 
+            display: block; 
+            margin: 20px auto; 
+            background: #1a1a1a;
+        }
+        body { 
+            background: #0a0a0a; 
+            font-family: Arial;
+        }
     </style>
 </head>
 <body>
@@ -403,26 +497,62 @@ func _physics_process(delta):
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let player = { x: 400, y: 300, size: 40, color: "#00ff00" };
+let player = { 
+    x: 50, 
+    y: 300, 
+    width: 40, 
+    height: 40, 
+    color: "#00ff00",
+    velocityY: 0,
+    jumping: false
+};
+
+const gravity = 0.8;
+const jumpPower = -15;
 
 function draw() {
-    ctx.fillStyle = "#2d2d2d";
+    // Limpar tela
+    ctx.fillStyle = "#1a1a1a";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
+    // Chão
+    ctx.fillStyle = "#654321";
+    ctx.fillRect(0, 550, canvas.width, 50);
+    
+    // Player
     ctx.fillStyle = player.color;
-    ctx.fillRect(player.x, player.y, player.size, player.size);
+    ctx.fillRect(player.x, player.y, player.width, player.height);
 }
 
 function update() {
+    // Física
+    player.velocityY += gravity;
+    player.y += player.velocityY;
+    
+    // Colisão com chão
+    if (player.y + player.height > 550) {
+        player.y = 550 - player.height;
+        player.velocityY = 0;
+        player.jumping = false;
+    }
+    
     draw();
     requestAnimationFrame(update);
 }
 
+// Controles
 document.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowLeft") player.x -= 10;
-    if (e.key === "ArrowRight") player.x += 10;
-    if (e.key === "ArrowUp") player.y -= 10;
-    if (e.key === "ArrowDown") player.y += 10;
+    if (e.key === " " && !player.jumping) {
+        player.velocityY = jumpPower;
+        player.jumping = true;
+    }
+});
+
+canvas.addEventListener("click", () => {
+    if (!player.jumping) {
+        player.velocityY = jumpPower;
+        player.jumping = true;
+    }
 });
 
 update();
@@ -430,43 +560,126 @@ update();
 </body>
 </html>
 ''',
-        "🐍 Web Scraper": '''import requests
+        "🐍 Python - Web Scraper": '''import requests
 from bs4 import BeautifulSoup
+import csv
+from datetime import datetime
 
-def scrape(url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, "html.parser")
-    
-    # Extrair títulos
-    titles = [h.text for h in soup.find_all("h1")]
-    
-    # Extrair links
-    links = [a.get("href") for a in soup.find_all("a")]
-    
-    return {"titles": titles, "links": links}
+def scrape_website(url):
+    """Extrai dados de um website"""
+    try:
+        # Fazer requisição
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        # Parse HTML
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        # Extrair dados (exemplo: títulos e links)
+        data = []
+        
+        for item in soup.find_all(['h1', 'h2', 'h3']):
+            title = item.get_text(strip=True)
+            if title:
+                data.append({
+                    'tipo': item.name,
+                    'texto': title,
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                })
+        
+        # Salvar em CSV
+        if data:
+            filename = f'scraped_data_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+            with open(filename, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=['tipo', 'texto', 'timestamp'])
+                writer.writeheader()
+                writer.writerows(data)
+            
+            print(f"✅ {len(data)} itens salvos em {filename}")
+            return data
+        else:
+            print("⚠️ Nenhum dado encontrado")
+            return []
+            
+    except Exception as e:
+        print(f"❌ Erro: {e}")
+        return []
 
 if __name__ == "__main__":
-    data = scrape("https://example.com")
-    print(data)
+    url = "https://example.com"
+    resultados = scrape_website(url)
+    print(f"Total de itens: {len(resultados)}")
 ''',
-        "🤖 Discord Bot": '''import discord
+        "🤖 Discord Bot Completo": '''import discord
 from discord.ext import commands
+import asyncio
 
-bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
+# Configuração do bot
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"Bot {bot.user} online!")
+    print(f"✅ Bot {bot.user} está online!")
+    await bot.change_presence(activity=discord.Game(name="!help para comandos"))
+
+@bot.event
+async def on_member_join(member):
+    """Mensagem de boas-vindas"""
+    channel = member.guild.system_channel
+    if channel:
+        await channel.send(f"👋 Bem-vindo(a) {member.mention}!")
 
 @bot.command()
 async def ping(ctx):
-    await ctx.send("Pong! 🏓")
+    """Verifica latência do bot"""
+    latency = round(bot.latency * 1000)
+    await ctx.send(f"🏓 Pong! Latência: {latency}ms")
 
 @bot.command()
 async def ola(ctx):
-    await ctx.send(f"Olá, {ctx.author.mention}!")
+    """Saudação"""
+    await ctx.send(f"👋 Olá, {ctx.author.mention}!")
 
-bot.run("SEU_TOKEN")
+@bot.command()
+async def servidor(ctx):
+    """Informações do servidor"""
+    guild = ctx.guild
+    embed = discord.Embed(
+        title=f"📊 Informações de {guild.name}",
+        color=discord.Color.blue()
+    )
+    embed.add_field(name="👥 Membros", value=guild.member_count)
+    embed.add_field(name="📅 Criado em", value=guild.created_at.strftime("%d/%m/%Y"))
+    embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
+    
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def avatar(ctx, member: discord.Member = None):
+    """Mostra avatar de um usuário"""
+    member = member or ctx.author
+    embed = discord.Embed(title=f"Avatar de {member.name}", color=discord.Color.green())
+    embed.set_image(url=member.display_avatar.url)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def limpar(ctx, quantidade: int):
+    """Limpa mensagens (admin)"""
+    if ctx.author.guild_permissions.manage_messages:
+        await ctx.channel.purge(limit=quantidade + 1)
+        await ctx.send(f"✅ {quantidade} mensagens deletadas!", delete_after=3)
+    else:
+        await ctx.send("❌ Você não tem permissão!")
+
+# Rodar bot
+bot.run("SEU_TOKEN_AQUI")
 '''
     }
     
@@ -477,83 +690,98 @@ bot.run("SEU_TOKEN")
     
     st.divider()
     
-    # Salvos
+    # Scripts salvos
     if st.session_state.saved_scripts:
-        st.markdown("### 💾 Salvos")
+        st.markdown("### 💾 Meus Scripts")
         for idx, s in enumerate(st.session_state.saved_scripts[-5:]):
             if st.button(f"📄 {s['name']}", key=f"saved_{idx}", use_container_width=True):
                 st.session_state.current_script = s['code']
                 st.rerun()
+        
+        if len(st.session_state.saved_scripts) > 5:
+            st.caption(f"+ {len(st.session_state.saved_scripts) - 5} mais na biblioteca")
     
-    st.caption(f"📊 {len(st.session_state.saved_scripts)} scripts")
+    st.divider()
+    st.caption(f"📊 Total de scripts: {len(st.session_state.saved_scripts)}")
 
 # ====== ÁREA PRINCIPAL ======
 
 st.markdown("""
 <div class="header-premium">
     <h1>🎮 ScriptMaster AI</h1>
-    <p style="color: white;">Gerador de Scripts e Jogos</p>
+    <p style="color: white;">Gerador Profissional de Scripts e Jogos com Inteligência Artificial</p>
 </div>
 """, unsafe_allow_html=True)
 
-tab1, tab2, tab3 = st.tabs(["🤖 Gerar", "💻 Editor", "📚 Biblioteca"])
+tab1, tab2, tab3 = st.tabs(["🤖 Gerar Código", "💻 Editor", "📚 Biblioteca"])
 
 # TAB 1: GERAR
 with tab1:
-    st.markdown("### 🎯 O que você quer criar?")
+    st.markdown("### 🎯 Descreva o que você quer criar")
     
     col1, col2 = st.columns([3, 1])
     
     with col1:
         prompt = st.text_area(
-            "📝 Descrição:",
-            placeholder="Ex: Crie um jogo de nave espacial em HTML5 com Canvas",
+            "📝 Descrição detalhada:",
+            placeholder="Ex: Crie um jogo de plataforma 2D em Godot 4.6 para mobile com controles touch, sistema de score, moedas colecionáveis e 3 níveis de dificuldade",
             height=150,
             key="prompt"
         )
     
     with col2:
         tipo = st.selectbox(
-            "🔤 Tipo",
+            "🔤 Tipo de código",
             [
                 "Godot 4.6 (GDScript)",
+                "Godot 4.6 (C#)",
                 "Unity (C#)",
-                "HTML5 Canvas",
-                "Python",
-                "JavaScript",
+                "HTML5 - Canvas Puro",
+                "HTML5 - Phaser 3",
+                "React Native Mobile",
+                "Python Script",
+                "JavaScript/Node.js",
                 "Discord Bot",
-                "SQL"
+                "Telegram Bot",
+                "SQL Database",
+                "Bash Script",
+                "PowerShell"
             ]
         )
         
-        nivel = st.select_slider("📊 Nível", ["Básico", "Médio", "Avançado"])
+        nivel = st.select_slider("📊 Complexidade", ["Básico", "Intermediário", "Avançado", "Expert"])
     
-    if st.button("⚡ GERAR CÓDIGO", use_container_width=True, type="primary"):
+    if st.button("⚡ GERAR CÓDIGO COMPLETO", use_container_width=True, type="primary"):
         if not prompt:
-            st.error("❌ Descreva o que quer!")
+            st.error("❌ Por favor, descreva o que você quer criar!")
         else:
-            with st.spinner("🔮 Gerando código..."):
+            with st.spinner("🔮 Gerando código profissional... Isso pode levar alguns segundos..."):
                 try:
                     modelos = get_models()
                     if not modelos:
-                        st.error("❌ API indisponível!")
+                        st.error("❌ API temporariamente indisponível. Tente novamente em alguns instantes.")
                         st.stop()
                     
                     model = genai.GenerativeModel(modelos[0])
                     
                     prompt_ia = f"""
-Você é expert em {tipo}. Crie código COMPLETO e FUNCIONAL.
+Você é um programador EXPERT em {tipo}. Crie código COMPLETO, FUNCIONAL e PROFISSIONAL.
 
 TAREFA: {prompt}
-NÍVEL: {nivel}
 
-REGRAS:
-1. Código COMPLETO pronto para usar
-2. Comentários explicativos
-3. Boas práticas
-4. APENAS código, sem markdown
+NÍVEL DE COMPLEXIDADE: {nivel}
 
-IMPORTANTE: NÃO use ``` no início ou fim. Retorne código puro.
+REGRAS OBRIGATÓRIAS:
+1. Código 100% COMPLETO e pronto para usar
+2. Comentários explicativos em português
+3. Seguir as melhores práticas da linguagem
+4. Incluir tratamento de erros
+5. Se for jogo: controles funcionais, física básica, sistema de pontuação
+6. Se for mobile: otimizar para touch e performance
+7. Código limpo e bem estruturado
+
+IMPORTANTE: Retorne APENAS o código puro, SEM markdown, SEM ```, SEM explicações extras.
+Comece diretamente com o código.
 """
                     
                     response = model.generate_content(prompt_ia)
@@ -566,7 +794,7 @@ IMPORTANTE: NÃO use ``` no início ou fim. Retorne código puro.
                     
                     st.session_state.current_script = codigo
                     
-                    st.success("✅ Código gerado!")
+                    st.success("✅ Código gerado com sucesso!")
                     st.balloons()
                     
                     # Detectar linguagem
@@ -579,63 +807,84 @@ IMPORTANTE: NÃO use ``` no início ou fim. Retorne código puro.
                     elif "HTML" in tipo:
                         lang = "html"
                         ext = ".html"
-                    elif "Python" in tipo or "Discord" in tipo:
+                    elif "Python" in tipo or "Discord" in tipo or "Telegram" in tipo:
                         lang = "python"
                         ext = ".py"
                     elif "SQL" in tipo:
                         lang = "sql"
                         ext = ".sql"
+                    elif "Bash" in tipo:
+                        lang = "bash"
+                        ext = ".sh"
+                    elif "PowerShell" in tipo:
+                        lang = "powershell"
+                        ext = ".ps1"
                     else:
                         lang = "javascript"
                         ext = ".js"
                     
                     # Mostrar código
-                    st.markdown("### 📄 Seu Código:")
+                    st.markdown("### 📄 Seu Código Está Pronto:")
                     st.code(codigo, language=lang)
                     
-                    # Botões
+                    # Informações
+                    linhas = len(codigo.split('\n'))
+                    caracteres = len(codigo)
+                    
+                    col_info1, col_info2, col_info3 = st.columns(3)
+                    with col_info1:
+                        st.metric("📏 Linhas", linhas)
+                    with col_info2:
+                        st.metric("🔤 Caracteres", caracteres)
+                    with col_info3:
+                        st.metric("💾 Tipo", lang.upper())
+                    
+                    st.divider()
+                    
+                    # Botões de ação
                     col_a, col_b, col_c = st.columns(3)
                     
                     with col_a:
                         st.download_button(
-                            "📥 DOWNLOAD",
+                            "📥 BAIXAR CÓDIGO",
                             data=codigo,
                             file_name=f"script{ext}",
                             mime="text/plain",
-                            use_container_width=True
+                            use_container_width=True,
+                            type="primary"
                         )
                     
                     with col_b:
-                        if st.button("💾 SALVAR", use_container_width=True, key="save_gen"):
+                        if st.button("💾 SALVAR NA BIBLIOTECA", use_container_width=True, key="save_gen"):
                             st.session_state.saved_scripts.append({
                                 "name": f"Script_{len(st.session_state.saved_scripts)+1}{ext}",
                                 "code": codigo,
                                 "language": lang,
                                 "created_at": datetime.now().isoformat()
                             })
-                            st.success("✅ Salvo!")
+                            st.success("✅ Script salvo na biblioteca!")
                             st.rerun()
                     
                     with col_c:
-                        if st.button("✏️ EDITAR", use_container_width=True, key="edit_gen"):
-                            st.info("👉 Vá para aba 'Editor'")
+                        if st.button("✏️ EDITAR CÓDIGO", use_container_width=True, key="edit_gen"):
+                            st.info("👉 Vá para a aba 'Editor' para editar!")
                     
                 except Exception as e:
-                    st.error(f"❌ Erro: {str(e)}")
-                    st.info("💡 Tente descrever de outra forma")
+                    st.error(f"❌ Erro ao gerar código: {str(e)}")
+                    st.info("💡 Dicas: Tente descrever de forma mais simples ou escolha outro tipo de código")
 
 # TAB 2: EDITOR
 with tab2:
-    st.markdown("### 💻 Editor de Código")
+    st.markdown("### 💻 Editor de Código Profissional")
     
     if st.session_state.current_script:
         col1, col2, col3 = st.columns([2, 1, 1])
         
         with col1:
-            nome = st.text_input("📝 Nome", value="meu_script", key="filename")
+            nome = st.text_input("📝 Nome do arquivo", value="meu_script", key="filename")
         
         with col2:
-            ext = st.text_input("📄 Ext", value=".py", key="ext")
+            ext = st.text_input("📄 Extensão", value=".py", key="ext")
         
         with col3:
             st.download_button(
@@ -646,7 +895,7 @@ with tab2:
             )
         
         codigo_edit = st.text_area(
-            "Código:",
+            "✏️ Edite seu código:",
             value=st.session_state.current_script,
             height=400,
             key="editor"
@@ -654,48 +903,111 @@ with tab2:
         
         st.session_state.current_script = codigo_edit
         
-        col_s, col_c = st.columns(2)
+        col_s, col_c, col_l = st.columns(3)
         
         with col_s:
-            if st.button("💾 Salvar na Biblioteca", use_container_width=True):
+            if st.button("💾 Salvar Alterações", use_container_width=True):
                 st.session_state.saved_scripts.append({
                     "name": f"{nome}{ext}",
                     "code": codigo_edit,
                     "language": "python",
                     "created_at": datetime.now().isoformat()
                 })
-                st.success("✅ Salvo!")
+                st.success("✅ Script salvo com sucesso!")
                 st.rerun()
         
         with col_c:
+            if st.button("📋 Copiar Código", use_container_width=True):
+                st.code(codigo_edit)
+                st.info("📋 Código pronto para copiar!")
+        
+        with col_l:
             if st.button("🗑️ Limpar Editor", use_container_width=True):
                 st.session_state.current_script = ""
                 st.rerun()
         
         st.divider()
-        st.markdown("### 👁️ Preview")
+        
+        # Estatísticas
+        linhas_edit = len(codigo_edit.split('\n'))
+        palavras = len(codigo_edit.split())
+        
+        col_stat1, col_stat2, col_stat3 = st.columns(3)
+        with col_stat1:
+            st.metric("📏 Linhas", linhas_edit)
+        with col_stat2:
+            st.metric("📝 Palavras", palavras)
+        with col_stat3:
+            st.metric("💾 Caracteres", len(codigo_edit))
+        
+        st.divider()
+        st.markdown("### 👁️ Preview do Código")
         st.code(codigo_edit, language="python")
         
     else:
-        st.info("📝 Gere um código ou selecione um template para editar!")
+        st.info("📝 Nenhum código carregado no editor!")
         
-        st.markdown("### 💡 Dicas:")
+        st.markdown("### 💡 Como começar:")
         st.markdown("""
-        1. Vá para aba **Gerar** e descreva o que quer
-        2. Ou clique em um **Template** na sidebar
-        3. O código aparecerá aqui para editar!
+        **Opção 1:** Vá para a aba **Gerar Código** e crie um novo script
+        
+        **Opção 2:** Clique em um **Template** na barra lateral
+        
+        **Opção 3:** Abra um script da **Biblioteca**
+        
+        O código aparecerá aqui automaticamente para você editar!
         """)
 
 # TAB 3: BIBLIOTECA
 with tab3:
-    st.markdown("### 📚 Scripts Salvos")
+    st.markdown("### 📚 Biblioteca de Scripts Salvos")
     
     if st.session_state.saved_scripts:
-        for idx, script in enumerate(reversed(st.session_state.saved_scripts)):
-            with st.expander(f"📄 {script['name']} - {datetime.fromisoformat(script['created_at']).strftime('%d/%m %H:%M')}"):
+        # Filtros e ordenação
+        col_filter1, col_filter2 = st.columns(2)
+        
+        with col_filter1:
+            search = st.text_input("🔍 Buscar script", placeholder="Digite para filtrar...")
+        
+        with col_filter2:
+            ordem = st.selectbox("📊 Ordenar por", ["Mais recentes", "Mais antigos", "Nome A-Z"])
+        
+        st.divider()
+        
+        # Aplicar filtros
+        scripts_filtered = st.session_state.saved_scripts.copy()
+        
+        if search:
+            scripts_filtered = [s for s in scripts_filtered if search.lower() in s['name'].lower()]
+        
+        if ordem == "Mais antigos":
+            scripts_filtered = scripts_filtered
+        elif ordem == "Mais recentes":
+            scripts_filtered = list(reversed(scripts_filtered))
+        elif ordem == "Nome A-Z":
+            scripts_filtered = sorted(scripts_filtered, key=lambda x: x['name'])
+        
+        # Mostrar scripts
+        for idx, script in enumerate(scripts_filtered):
+            data_criacao = datetime.fromisoformat(script['created_at']).strftime('%d/%m/%Y às %H:%M')
+            
+            with st.expander(f"📄 {script['name']} - Criado em {data_criacao}"):
                 st.code(script['code'], language=script.get('language', 'python'))
                 
-                col1, col2, col3 = st.columns(3)
+                # Estatísticas do script
+                linhas_script = len(script['code'].split('\n'))
+                tamanho_kb = len(script['code']) / 1024
+                
+                col_stat1, col_stat2 = st.columns(2)
+                with col_stat1:
+                    st.caption(f"📏 {linhas_script} linhas")
+                with col_stat2:
+                    st.caption(f"💾 {tamanho_kb:.2f} KB")
+                
+                st.divider()
+                
+                # Ações
+                col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
                     st.download_button(
@@ -707,24 +1019,40 @@ with tab3:
                     )
                 
                 with col2:
-                    if st.button("📋 Abrir no Editor", key=f"cp_{idx}", use_container_width=True):
+                    if st.button("📋 Copiar", key=f"cp_{idx}", use_container_width=True):
                         st.session_state.current_script = script['code']
-                        st.success("✅ Aberto!")
+                        st.success("✅ Código copiado para o editor!")
                         st.rerun()
                 
                 with col3:
+                    if st.button("✏️ Editar", key=f"ed_{idx}", use_container_width=True):
+                        st.session_state.current_script = script['code']
+                        st.info("👉 Vá para a aba 'Editor'")
+                
+                with col4:
                     if st.button("🗑️ Deletar", key=f"del_{idx}", use_container_width=True):
-                        real_idx = len(st.session_state.saved_scripts) - 1 - idx
+                        real_idx = st.session_state.saved_scripts.index(script)
                         st.session_state.saved_scripts.pop(real_idx)
-                        st.success("✅ Deletado!")
+                        st.success("✅ Script deletado!")
                         st.rerun()
+        
+        if not scripts_filtered and search:
+            st.warning(f"🔍 Nenhum script encontrado com '{search}'")
+        
     else:
-        st.info("📭 Nenhum script salvo ainda!")
+        st.info("📭 Sua biblioteca está vazia!")
         st.markdown("""
-        **Como salvar scripts:**
-        1. Gere um código na aba **Gerar**
-        2. Clique em **Salvar**
-        3. Ou edite no **Editor** e salve
+        ### 💡 Como adicionar scripts à biblioteca:
+        
+        **1.** Vá para a aba **Gerar Código**
+        
+        **2.** Crie um novo script com a IA
+        
+        **3.** Clique em **Salvar na Biblioteca**
+        
+        **4.** Ou edite um código no **Editor** e salve
+        
+        Todos os seus scripts salvos aparecerão aqui! 📚
         """)
 
 # ====== RODAPÉ ======
@@ -732,15 +1060,23 @@ st.markdown("---")
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.metric("📊 Scripts", len(st.session_state.saved_scripts))
+    st.metric("📊 Scripts Salvos", len(st.session_state.saved_scripts))
 
 with col2:
-    status = "👑 VIP" if is_vip_active() else "🆓 FREE"
-    st.metric("⚡ Status", status)
+    if st.session_state.is_master:
+        status_text = "🔥 ADMIN"
+    elif is_vip_active():
+        status_text = "👑 VIP"
+    else:
+        status_text = "🆓 FREE"
+    st.metric("⚡ Plano", status_text)
 
 with col3:
-    linhas = len(st.session_state.current_script.split('\n')) if st.session_state.current_script else 0
-    st.metric("📏 Linhas", linhas)
+    linhas_atual = len(st.session_state.current_script.split('\n')) if st.session_state.current_script else 0
+    st.metric("📏 Linhas no Editor", linhas_atual)
 
 with col4:
-    st.metric("🔐 Login", "Salvo ✅" if "user" in st.query_params else "Não")
+    login_status = "Salvo ✅" if "user" in st.query_params else "Temporário"
+    st.metric("🔐 Login", login_status)
+
+st.caption("💡 Desenvolvido com ❤️ usando Streamlit e Google Gemini AI")

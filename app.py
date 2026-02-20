@@ -5,8 +5,9 @@ import json
 import hashlib
 import re
 import base64
+import uuid
 
-# Configuração
+# ==================== CONFIGURAÇÃO ====================
 st.set_page_config(
     page_title="ScriptMaster AI Pro 🎮",
     page_icon="🎮",
@@ -14,116 +15,535 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CÓDIGO MASTER (SECRETO)
+# CÓDIGO MASTER
 MASTER_CODE = "GuizinhsDono"
 
-# CSS Melhorado
+# Limites de uso
+DAILY_LIMIT_FREE = 4
+DAILY_LIMIT_CHAT_FREE = 10
+
+# ==================== CSS ULTRA MODERNO ====================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Inter:wght@400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
     
-    * { font-family: 'Inter', sans-serif; }
-    
-    .header-premium {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 2rem;
-        border-radius: 15px;
-        margin-bottom: 2rem;
-        text-align: center;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-        animation: gradient 3s ease infinite;
+    /* Reset e Base */
+    * {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     
-    @keyframes gradient {
+    .stApp {
+        background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+    }
+    
+    /* Header Premium Animado */
+    .header-ultra {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f64f59 100%);
+        background-size: 200% 200%;
+        animation: gradientShift 8s ease infinite;
+        padding: 2.5rem 2rem;
+        border-radius: 20px;
+        margin-bottom: 2rem;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .header-ultra::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        animation: shine 4s linear infinite;
+    }
+    
+    @keyframes gradientShift {
         0%, 100% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
     }
     
-    .header-premium h1 {
-        color: white;
-        margin: 0;
-        font-size: 2.5rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    @keyframes shine {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
     
-    .master-badge {
-        background: linear-gradient(135deg, #FF0000 0%, #8B0000 100%);
+    .header-ultra h1 {
         color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
+        margin: 0;
+        font-size: 3rem;
+        font-weight: 800;
+        text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        position: relative;
+        z-index: 1;
+    }
+    
+    .header-ultra p {
+        color: rgba(255,255,255,0.9);
+        font-size: 1.1rem;
+        margin-top: 0.5rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Badges */
+    .master-badge {
+        background: linear-gradient(135deg, #ff0000 0%, #ff4444 50%, #cc0000 100%);
+        color: white;
+        padding: 0.6rem 1.5rem;
+        border-radius: 30px;
         font-weight: 700;
         display: inline-block;
-        animation: pulse 2s infinite;
-        box-shadow: 0 4px 15px rgba(255, 0, 0, 0.4);
+        animation: masterPulse 2s infinite;
+        box-shadow: 0 4px 20px rgba(255, 0, 0, 0.5);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    @keyframes masterPulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 4px 20px rgba(255, 0, 0, 0.5); }
+        50% { transform: scale(1.05); box-shadow: 0 6px 30px rgba(255, 0, 0, 0.7); }
     }
     
     .vip-badge {
-        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%);
+        color: #1a1a2e;
+        padding: 0.6rem 1.5rem;
+        border-radius: 30px;
+        font-weight: 700;
+        display: inline-block;
+        box-shadow: 0 4px 20px rgba(255, 215, 0, 0.5);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .free-badge {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
         color: white;
         padding: 0.5rem 1rem;
         border-radius: 20px;
-        font-weight: 700;
+        font-weight: 600;
         display: inline-block;
-        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
     }
     
-    @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-    }
-    
+    /* Welcome Box */
     .welcome-box {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 1rem;
-        border-radius: 10px;
-        margin: 1rem 0;
-    }
-    
-    .vip-info {
-        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
         color: white;
         padding: 1.5rem;
-        border-radius: 10px;
+        border-radius: 16px;
         margin: 1rem 0;
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
     }
     
-    .code-stats {
-        background: #f0f2f6;
-        padding: 1rem;
-        border-radius: 8px;
+    .welcome-box h3 {
+        margin: 0 0 0.5rem 0;
+        font-weight: 700;
+    }
+    
+    /* Chat Container */
+    .chat-container {
+        background: linear-gradient(180deg, #1a1a2e 0%, #0f0f23 100%);
+        border-radius: 20px;
+        padding: 1.5rem;
         margin: 1rem 0;
+        border: 1px solid rgba(255,255,255,0.1);
+        max-height: 500px;
+        overflow-y: auto;
     }
     
-    .success-animation {
-        animation: slideIn 0.5s ease-out;
+    .chat-message {
+        padding: 1rem 1.5rem;
+        border-radius: 16px;
+        margin: 0.8rem 0;
+        position: relative;
+        animation: fadeInUp 0.3s ease;
     }
     
-    @keyframes slideIn {
+    @keyframes fadeInUp {
         from {
             opacity: 0;
-            transform: translateY(-20px);
+            transform: translateY(10px);
         }
         to {
             opacity: 1;
             transform: translateY(0);
         }
     }
+    
+    .user-message {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        margin-left: 20%;
+        border-bottom-right-radius: 4px;
+    }
+    
+    .ai-message {
+        background: linear-gradient(135deg, #2d2d44 0%, #1a1a2e 100%);
+        color: #e0e0e0;
+        margin-right: 20%;
+        border-bottom-left-radius: 4px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .message-actions {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        display: flex;
+        gap: 5px;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    
+    .chat-message:hover .message-actions {
+        opacity: 1;
+    }
+    
+    .action-btn {
+        background: rgba(255,255,255,0.1);
+        border: none;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+    }
+    
+    .action-btn:hover {
+        background: rgba(255,255,255,0.2);
+    }
+    
+    /* Cards */
+    .feature-card {
+        background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+        border-radius: 16px;
+        padding: 1.5rem;
+        border: 1px solid rgba(255,255,255,0.1);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        border-color: rgba(102, 126, 234, 0.5);
+    }
+    
+    .feature-card h4 {
+        color: #667eea;
+        margin: 0 0 0.5rem 0;
+    }
+    
+    .feature-card p {
+        color: #a0a0a0;
+        margin: 0;
+        font-size: 0.9rem;
+    }
+    
+    /* Stats Card */
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 16px;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+    }
+    
+    .stats-card h2 {
+        font-size: 2.5rem;
+        margin: 0;
+        font-weight: 800;
+    }
+    
+    .stats-card p {
+        margin: 0.3rem 0 0 0;
+        opacity: 0.9;
+    }
+    
+    /* Usage Meter */
+    .usage-meter {
+        background: #1a1a2e;
+        border-radius: 10px;
+        padding: 1rem;
+        margin: 1rem 0;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .usage-bar {
+        background: #2d2d44;
+        border-radius: 8px;
+        height: 10px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    
+    .usage-fill {
+        height: 100%;
+        border-radius: 8px;
+        transition: width 0.5s ease;
+    }
+    
+    .usage-fill.green { background: linear-gradient(90deg, #00c853, #69f0ae); }
+    .usage-fill.yellow { background: linear-gradient(90deg, #ffd600, #ffff00); }
+    .usage-fill.red { background: linear-gradient(90deg, #ff1744, #ff5252); }
+    
+    /* Code Block */
+    .code-block {
+        background: #0d1117;
+        border-radius: 12px;
+        padding: 1rem;
+        margin: 1rem 0;
+        border: 1px solid #30363d;
+        overflow-x: auto;
+    }
+    
+    .code-block pre {
+        margin: 0;
+        color: #c9d1d9;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+    }
+    
+    /* Buttons */
+    .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+    }
+    
+    /* Input Fields */
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea {
+        background: #1a1a2e !important;
+        color: white !important;
+        border: 2px solid #2d2d44 !important;
+        border-radius: 12px !important;
+        padding: 0.75rem 1rem !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .stTextInput > div > div > input:focus,
+    .stTextArea > div > div > textarea:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2) !important;
+    }
+    
+    /* Select Box */
+    .stSelectbox > div > div {
+        background: #1a1a2e !important;
+        border: 2px solid #2d2d44 !important;
+        border-radius: 12px !important;
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        background: #1a1a2e;
+        border-radius: 12px;
+        padding: 0.5rem;
+        gap: 0.5rem;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        color: #a0a0a0;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+    }
+    
+    /* Expander */
+    .streamlit-expanderHeader {
+        background: #1a1a2e !important;
+        border: 1px solid #2d2d44 !important;
+        border-radius: 12px !important;
+        color: white !important;
+    }
+    
+    /* Divider */
+    hr {
+        border: none;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #2d2d44, transparent);
+        margin: 2rem 0;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #1a1a2e;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #667eea;
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #764ba2;
+    }
+    
+    /* Hide Streamlit Elements */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* Metric Cards */
+    [data-testid="metric-container"] {
+        background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 1rem;
+    }
+    
+    [data-testid="metric-container"] label {
+        color: #a0a0a0 !important;
+    }
+    
+    [data-testid="metric-container"] [data-testid="stMetricValue"] {
+        color: white !important;
+    }
+    
+    /* Toast/Alerts */
+    .stAlert {
+        background: #1a1a2e !important;
+        border: 1px solid #2d2d44 !important;
+        border-radius: 12px !important;
+    }
+    
+    /* Login Card */
+    .login-card {
+        background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+        border-radius: 24px;
+        padding: 2.5rem;
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    .login-card h3 {
+        color: white;
+        margin: 0 0 1.5rem 0;
+        text-align: center;
+    }
+    
+    /* VIP Info Card */
+    .vip-info-card {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: #1a1a2e;
+        padding: 2rem;
+        border-radius: 16px;
+        margin: 1rem 0;
+        box-shadow: 0 10px 40px rgba(255, 215, 0, 0.3);
+    }
+    
+    .vip-info-card h3 {
+        margin: 0 0 1rem 0;
+        font-weight: 800;
+    }
+    
+    /* Floating Action Button */
+    .fab {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+        cursor: pointer;
+        transition: all 0.3s;
+        z-index: 1000;
+    }
+    
+    .fab:hover {
+        transform: scale(1.1);
+    }
+    
+    /* Template Card */
+    .template-card {
+        background: #1e1e2e;
+        border: 1px solid #2d2d44;
+        border-radius: 12px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .template-card:hover {
+        border-color: #667eea;
+        transform: translateX(5px);
+    }
+    
+    /* Sidebar Improvements */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 100%) !important;
+    }
+    
+    section[data-testid="stSidebar"] > div {
+        background: transparent !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ====== SISTEMA DE LOGIN PERSISTENTE ======
+# ==================== FUNÇÕES DE PERSISTÊNCIA ====================
+
+def encode_data(data):
+    """Codifica dados para URL"""
+    try:
+        json_str = json.dumps(data, ensure_ascii=False)
+        encoded = base64.urlsafe_b64encode(json_str.encode()).decode()
+        return encoded
+    except:
+        return ""
+
+def decode_data(encoded):
+    """Decodifica dados da URL"""
+    try:
+        json_str = base64.urlsafe_b64decode(encoded.encode()).decode()
+        return json.loads(json_str)
+    except:
+        return {}
 
 def generate_token(username, is_master, vip_days=0):
     """Gera token de login"""
-    data = f"{username}|{is_master}|{vip_days}|scriptmaster"
-    return hashlib.md5(data.encode()).hexdigest()[:16]
+    data = f"{username}|{is_master}|{vip_days}|scriptmaster_v3"
+    return hashlib.sha256(data.encode()).hexdigest()[:20]
 
 def save_login(username, is_master, vip_until=None):
     """Salva login na URL"""
     vip_days = 0
     if vip_until:
-        vip_days = (vip_until - datetime.now()).days
+        vip_days = max(0, (vip_until - datetime.now()).days)
     
     token = generate_token(username, is_master, vip_days)
     
@@ -131,6 +551,40 @@ def save_login(username, is_master, vip_until=None):
     st.query_params["master"] = "1" if is_master else "0"
     st.query_params["vip"] = str(vip_days)
     st.query_params["token"] = token
+
+def save_user_data():
+    """Salva dados do usuário (histórico, favoritos, etc) na URL"""
+    try:
+        data = {
+            "history": st.session_state.get("script_history", [])[-20:],  # Últimos 20
+            "favorites": st.session_state.get("favorites", [])[-20:],  # Últimos 20
+            "saved": st.session_state.get("saved_scripts", [])[-10:],  # Últimos 10
+            "usage": st.session_state.get("daily_usage", {}),
+            "chat": st.session_state.get("chat_messages", [])[-30:]  # Últimas 30 msgs
+        }
+        encoded = encode_data(data)
+        if len(encoded) < 2000:  # Limite de URL
+            st.query_params["data"] = encoded
+    except Exception as e:
+        pass
+
+def load_user_data():
+    """Carrega dados do usuário da URL"""
+    try:
+        if "data" in st.query_params:
+            encoded = st.query_params.get("data", "")
+            data = decode_data(encoded)
+            
+            if data:
+                st.session_state.script_history = data.get("history", [])
+                st.session_state.favorites = data.get("favorites", [])
+                st.session_state.saved_scripts = data.get("saved", [])
+                st.session_state.daily_usage = data.get("usage", {})
+                st.session_state.chat_messages = data.get("chat", [])
+                return True
+    except:
+        pass
+    return False
 
 def load_login():
     """Carrega login da URL"""
@@ -151,14 +605,15 @@ def load_login():
                 
                 if vip_days > 0:
                     st.session_state.vip_until = datetime.now() + timedelta(days=vip_days)
-                elif is_master:
-                    st.session_state.vip_until = None
                 else:
                     st.session_state.vip_until = None
                 
                 st.session_state.authenticated = True
+                
+                # Carregar dados do usuário
+                load_user_data()
+                
                 return True
-        
         return False
     except:
         return False
@@ -166,16 +621,79 @@ def load_login():
 def clear_login():
     """Limpa login"""
     st.query_params.clear()
-    for key in ['authenticated', 'is_master', 'vip_until', 'username', 'current_script', 'saved_scripts']:
+    keys_to_clear = ['authenticated', 'is_master', 'vip_until', 'username', 
+                     'current_script', 'saved_scripts', 'favorites', 
+                     'script_history', 'chat_messages', 'daily_usage']
+    for key in keys_to_clear:
         if key in st.session_state:
             if key == 'authenticated':
                 st.session_state[key] = False
-            elif key in ['saved_scripts']:
+            elif key in ['saved_scripts', 'favorites', 'script_history', 'chat_messages']:
                 st.session_state[key] = []
+            elif key == 'daily_usage':
+                st.session_state[key] = {}
             else:
                 st.session_state[key] = None
 
-# Inicializar session state
+# ==================== SISTEMA DE LIMITE DE USO ====================
+
+def get_today_key():
+    """Retorna chave do dia atual"""
+    return datetime.now().strftime("%Y-%m-%d")
+
+def check_usage_limit(usage_type="generate"):
+    """Verifica se o usuário ainda tem uso disponível"""
+    if st.session_state.get("is_master", False) or is_vip_active():
+        return True, float('inf')
+    
+    today = get_today_key()
+    
+    if "daily_usage" not in st.session_state:
+        st.session_state.daily_usage = {}
+    
+    if today not in st.session_state.daily_usage:
+        st.session_state.daily_usage = {today: {"generate": 0, "chat": 0}}
+    
+    current_usage = st.session_state.daily_usage[today].get(usage_type, 0)
+    
+    if usage_type == "generate":
+        limit = DAILY_LIMIT_FREE
+    else:
+        limit = DAILY_LIMIT_CHAT_FREE
+    
+    remaining = limit - current_usage
+    return remaining > 0, remaining
+
+def increment_usage(usage_type="generate"):
+    """Incrementa contador de uso"""
+    if st.session_state.get("is_master", False) or is_vip_active():
+        return
+    
+    today = get_today_key()
+    
+    if "daily_usage" not in st.session_state:
+        st.session_state.daily_usage = {}
+    
+    if today not in st.session_state.daily_usage:
+        st.session_state.daily_usage = {today: {"generate": 0, "chat": 0}}
+    
+    st.session_state.daily_usage[today][usage_type] = \
+        st.session_state.daily_usage[today].get(usage_type, 0) + 1
+    
+    # Salvar dados
+    save_user_data()
+
+def get_usage_stats():
+    """Retorna estatísticas de uso"""
+    today = get_today_key()
+    
+    if "daily_usage" not in st.session_state:
+        return {"generate": 0, "chat": 0}
+    
+    return st.session_state.daily_usage.get(today, {"generate": 0, "chat": 0})
+
+# ==================== INICIALIZAÇÃO ====================
+
 default_states = {
     "authenticated": False,
     "is_master": False,
@@ -188,14 +706,16 @@ default_states = {
     "script_history": [],
     "favorites": [],
     "current_language": "python",
-    "theme": "dark"
+    "chat_messages": [],
+    "daily_usage": {},
+    "editing_message_id": None
 }
 
 for key, value in default_states.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
-# ====== AUTO-LOGIN ======
+# Auto-login
 if not st.session_state.authenticated and not st.session_state.login_checked:
     st.session_state.login_checked = True
     if load_login():
@@ -205,717 +725,2146 @@ if not st.session_state.authenticated and not st.session_state.login_checked:
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 except:
-    st.error("❌ Chave API não configurada! Configure em Settings > Secrets")
-    st.code("""
-# Adicione no arquivo .streamlit/secrets.toml:
-GEMINI_API_KEY = "sua_chave_aqui"
-""")
+    st.error("❌ Chave API não configurada!")
+    st.info("Configure em Settings > Secrets > GEMINI_API_KEY")
     st.stop()
 
 def is_vip_active():
-    if st.session_state.is_master:
+    if st.session_state.get("is_master", False):
         return True
-    if st.session_state.vip_until:
-        return datetime.now() < st.session_state.vip_until
+    vip_until = st.session_state.get("vip_until")
+    if vip_until:
+        return datetime.now() < vip_until
     return False
 
 @st.cache_resource
 def get_models():
     try:
         return [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    except Exception as e:
-        st.error(f"Erro ao carregar modelos: {e}")
-        return []
+    except:
+        return ["models/gemini-1.5-flash"]
 
 def detect_language(code):
     """Detecta a linguagem do código"""
     code_lower = code.lower()
     
-    if 'extends' in code_lower and 'func' in code_lower:
+    if 'extends' in code_lower and 'func ' in code_lower:
         return 'gdscript', '.gd'
     elif 'using unityengine' in code_lower or 'monobehaviour' in code_lower:
         return 'csharp', '.cs'
     elif '<!doctype html>' in code_lower or '<html' in code_lower:
         return 'html', '.html'
-    elif 'import react' in code_lower or 'const' in code_lower and '=>' in code_lower:
-        return 'javascript', '.jsx'
-    elif 'def ' in code_lower or 'import ' in code_lower:
+    elif 'local ' in code_lower and 'function' in code_lower:
+        return 'lua', '.lua'
+    elif 'gg.' in code_lower or 'gameguardian' in code_lower.replace(' ', ''):
+        return 'lua', '.lua'
+    elif 'def ' in code_lower and 'import ' in code_lower:
         return 'python', '.py'
-    elif 'select' in code_lower and 'from' in code_lower:
+    elif 'select ' in code_lower and 'from ' in code_lower:
         return 'sql', '.sql'
-    elif 'function' in code_lower or 'const' in code_lower or 'let' in code_lower:
+    elif 'function' in code_lower or 'const ' in code_lower:
         return 'javascript', '.js'
     else:
         return 'python', '.py'
 
-def download_button_with_icon(label, data, filename, mime="text/plain"):
-    """Botão de download customizado"""
-    b64 = base64.b64encode(data.encode()).decode()
-    href = f'<a href="data:{mime};base64,{b64}" download="{filename}">{label}</a>'
-    return href
+# ==================== TEMPLATES COMPLETOS ====================
 
-# ====== TEMPLATES EXPANDIDOS ======
 TEMPLATES = {
-    "🎮 Jogos": {
-        "Godot - Player 2D Completo": {
-            "code": '''extends CharacterBody2D
-
-# Configurações do Player
-const SPEED = 300.0
-const JUMP_VELOCITY = -400.0
-const ACCELERATION = 1500.0
-const FRICTION = 1200.0
-const AIR_RESISTANCE = 200.0
-
-# Física
-var gravity = ProjectSettings.get_setting("physics/2d/default_gravity")
-var is_jumping = false
-
-# Referências
-@onready var sprite = $AnimatedSprite2D
-@onready var animation_player = $AnimationPlayer
-
-func _ready():
-    # Configuração inicial
-    print("Player pronto!")
-
-func _physics_process(delta):
-    # Gravidade
-    if not is_on_floor():
-        velocity.y += gravity * delta
-        velocity.x = move_toward(velocity.x, 0, AIR_RESISTANCE * delta)
-    else:
-        is_jumping = false
-    
-    # Pulo
-    if Input.is_action_just_pressed("ui_up") and is_on_floor():
-        velocity.y = JUMP_VELOCITY
-        is_jumping = true
-        play_animation("jump")
-    
-    # Movimento horizontal
-    var direction = Input.get_axis("ui_left", "ui_right")
-    
-    if direction != 0:
-        velocity.x = move_toward(velocity.x, direction * SPEED, ACCELERATION * delta)
-        sprite.flip_h = direction < 0
-        
-        if is_on_floor() and not is_jumping:
-            play_animation("run")
-    else:
-        velocity.x = move_toward(velocity.x, 0, FRICTION * delta)
-        
-        if is_on_floor() and not is_jumping:
-            play_animation("idle")
-    
-    # Aplicar movimento
-    move_and_slide()
-
-func play_animation(anim_name):
-    if sprite.animation != anim_name:
-        sprite.play(anim_name)
-
-# Função para receber dano
-func take_damage(amount):
-    print("Dano recebido: ", amount)
-    play_animation("hurt")
-
-# Função para coletar item
-func collect_item(item):
-    print("Item coletado: ", item)
-''',
-            "lang": "gdscript",
-            "ext": ".gd"
-        },
-        
-        "HTML5 - Jogo Completo com Score": {
+    "🎮 Jogos HTML5 Android": {
+        "PWA Game - Plataforma Completo": {
             "code": '''<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Jogo HTML5</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>Platformer Mobile</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="data:application/json,{
+        \\"name\\": \\"Platformer Mobile\\",
+        \\"short_name\\": \\"Platformer\\",
+        \\"start_url\\": \\"./\\",
+        \\"display\\": \\"fullscreen\\",
+        \\"orientation\\": \\"landscape\\",
+        \\"background_color\\": \\"#1a1a2e\\",
+        \\"theme_color\\": \\"#667eea\\"
+    }">
+    
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
         
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            font-family: 'Arial', sans-serif;
-        }
-        
-        #gameContainer {
-            text-align: center;
-        }
-        
-        canvas {
-            border: 5px solid #fff;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            display: block;
-            margin: 20px auto;
             background: #1a1a2e;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
         }
         
-        #score {
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .ui-box {
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
             color: white;
-            font-size: 32px;
+            font-family: Arial, sans-serif;
             font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            margin-bottom: 20px;
+            font-size: 18px;
+            backdrop-filter: blur(10px);
         }
         
         #controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40%;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 20px;
+            z-index: 10;
+        }
+        
+        .joystick-area {
+            width: 150px;
+            height: 150px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid rgba(255,255,255,0.3);
+        }
+        
+        .joystick-inner {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            box-shadow: 0 5px 20px rgba(102,126,234,0.5);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .action-btn {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            box-shadow: 0 5px 20px rgba(102,126,234,0.5);
+            border: 3px solid rgba(255,255,255,0.3);
+        }
+        
+        .action-btn:active {
+            transform: scale(0.9);
+        }
+        
+        #pauseMenu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        
+        .menu-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
-            margin-top: 20px;
-            font-size: 18px;
-        }
-        
-        button {
-            background: #fff;
-            color: #667eea;
             border: none;
-            padding: 15px 30px;
-            font-size: 18px;
+            padding: 20px 60px;
+            font-size: 24px;
             font-weight: bold;
-            border-radius: 25px;
-            cursor: pointer;
+            border-radius: 30px;
             margin: 10px;
-            transition: all 0.3s;
+            cursor: pointer;
         }
         
-        button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 5px 15px rgba(255,255,255,0.3);
+        #gameOver {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        
+        #gameOver h1 {
+            color: #ff4444;
+            font-size: 48px;
+            margin-bottom: 20px;
+            font-family: Arial;
+        }
+        
+        #finalScore {
+            color: white;
+            font-size: 32px;
+            margin-bottom: 30px;
+            font-family: Arial;
         }
     </style>
 </head>
 <body>
-    <div id="gameContainer">
-        <div id="score">Score: 0</div>
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
-        <div id="controls">
-            <p>⬅️ A | D ➡️ | ESPAÇO para pular | Clique para começar</p>
-            <button onclick="restartGame()">🔄 Reiniciar</button>
-            <button onclick="pauseGame()">⏸️ Pausar</button>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui">
+        <div class="ui-box" id="scoreDisplay">🪙 0</div>
+        <div class="ui-box" id="levelDisplay">Nível 1</div>
+        <div class="ui-box" id="livesDisplay">❤️❤️❤️</div>
+    </div>
+    
+    <div id="controls">
+        <div class="joystick-area" id="joystick">
+            <div class="joystick-inner" id="joystickInner"></div>
+        </div>
+        <div class="action-buttons">
+            <div class="action-btn" id="jumpBtn">⬆️</div>
+            <div class="action-btn" id="actionBtn">⚡</div>
         </div>
     </div>
-
+    
+    <div id="pauseMenu">
+        <h1 style="color:white; font-size:48px; margin-bottom:40px;">⏸️ PAUSADO</h1>
+        <button class="menu-btn" id="resumeBtn">▶️ Continuar</button>
+        <button class="menu-btn" id="restartBtn">🔄 Reiniciar</button>
+    </div>
+    
+    <div id="gameOver">
+        <h1>💀 GAME OVER</h1>
+        <div id="finalScore">Score: 0</div>
+        <button class="menu-btn" id="retryBtn">🔄 Tentar Novamente</button>
+    </div>
+    
     <script>
+        // Canvas Setup
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        // Configurações do jogo
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Game State
+        let gameState = 'playing';
         let score = 0;
-        let gameRunning = false;
-        let gamePaused = false;
-        let gameSpeed = 3;
+        let level = 1;
+        let lives = 3;
+        
+        // Physics
+        const GRAVITY = 0.6;
+        const FRICTION = 0.85;
+        const JUMP_FORCE = -15;
         
         // Player
         const player = {
             x: 100,
-            y: 450,
+            y: 300,
             width: 50,
             height: 50,
-            color: '#00ff00',
-            velocityY: 0,
+            vx: 0,
+            vy: 0,
+            speed: 8,
             jumping: false,
-            speed: 5
+            grounded: false,
+            color: '#00ff88',
+            facing: 1
         };
         
-        // Física
-        const gravity = 0.8;
-        const jumpPower = -15;
-        const groundY = 550;
-        
-        // Obstáculos
-        let obstacles = [];
-        let obstacleTimer = 0;
-        
-        // Moedas
+        // Level
+        let platforms = [];
         let coins = [];
-        let coinTimer = 0;
-        
-        // Partículas
+        let enemies = [];
         let particles = [];
         
-        class Obstacle {
-            constructor() {
-                this.x = canvas.width;
-                this.y = groundY - 50;
-                this.width = 40;
-                this.height = 50;
-                this.color = '#ff0000';
-                this.speed = gameSpeed;
+        function generateLevel() {
+            platforms = [
+                {x: 0, y: canvas.height - 50, width: canvas.width, height: 50, color: '#4a4a6a'},
+                {x: 200, y: canvas.height - 150, width: 150, height: 20, color: '#5a5a8a'},
+                {x: 450, y: canvas.height - 250, width: 150, height: 20, color: '#5a5a8a'},
+                {x: 700, y: canvas.height - 200, width: 200, height: 20, color: '#5a5a8a'},
+                {x: 100, y: canvas.height - 350, width: 120, height: 20, color: '#5a5a8a'}
+            ];
+            
+            coins = [
+                {x: 250, y: canvas.height - 200, radius: 15, collected: false},
+                {x: 500, y: canvas.height - 300, radius: 15, collected: false},
+                {x: 780, y: canvas.height - 250, radius: 15, collected: false},
+                {x: 150, y: canvas.height - 400, radius: 15, collected: false}
+            ];
+            
+            enemies = [
+                {x: 500, y: canvas.height - 90, width: 40, height: 40, vx: 2, minX: 400, maxX: 600}
+            ];
+        }
+        generateLevel();
+        
+        // Touch Controls
+        let joystickActive = false;
+        let joystickVector = {x: 0, y: 0};
+        const joystickArea = document.getElementById('joystick');
+        const joystickInner = document.getElementById('joystickInner');
+        const jumpBtn = document.getElementById('jumpBtn');
+        
+        joystickArea.addEventListener('touchstart', (e) => {
+            joystickActive = true;
+            handleJoystick(e);
+        });
+        
+        joystickArea.addEventListener('touchmove', (e) => {
+            if (joystickActive) handleJoystick(e);
+        });
+        
+        joystickArea.addEventListener('touchend', () => {
+            joystickActive = false;
+            joystickVector = {x: 0, y: 0};
+            joystickInner.style.transform = 'translate(0, 0)';
+        });
+        
+        function handleJoystick(e) {
+            const touch = e.touches[0];
+            const rect = joystickArea.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            let dx = touch.clientX - centerX;
+            let dy = touch.clientY - centerY;
+            
+            const maxDist = 40;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            if (dist > maxDist) {
+                dx = (dx / dist) * maxDist;
+                dy = (dy / dist) * maxDist;
             }
             
-            update() {
-                this.x -= this.speed;
-            }
+            joystickVector.x = dx / maxDist;
+            joystickVector.y = dy / maxDist;
             
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-                
-                // Sombra
-                ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                ctx.fillRect(this.x + 5, this.y + this.height, this.width - 10, 10);
-            }
+            joystickInner.style.transform = `translate(${dx}px, ${dy}px)`;
         }
         
-        class Coin {
-            constructor() {
-                this.x = canvas.width;
-                this.y = Math.random() * 300 + 100;
-                this.radius = 15;
-                this.color = '#FFD700';
-                this.speed = gameSpeed;
-                this.collected = false;
+        jumpBtn.addEventListener('touchstart', () => {
+            if (player.grounded) {
+                player.vy = JUMP_FORCE;
+                player.jumping = true;
+                player.grounded = false;
+                createParticles(player.x + player.width/2, player.y + player.height, '#00ff88', 5);
             }
-            
-            update() {
-                this.x -= this.speed;
-            }
-            
-            draw() {
-                if (!this.collected) {
-                    ctx.fillStyle = this.color;
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // Brilho
-                    ctx.fillStyle = '#FFF';
-                    ctx.beginPath();
-                    ctx.arc(this.x - 5, this.y - 5, 5, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-        }
+        });
         
-        class Particle {
-            constructor(x, y, color) {
-                this.x = x;
-                this.y = y;
-                this.vx = (Math.random() - 0.5) * 5;
-                this.vy = (Math.random() - 0.5) * 5;
-                this.radius = Math.random() * 3 + 2;
-                this.color = color;
-                this.life = 30;
-            }
-            
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                this.life--;
-            }
-            
-            draw() {
-                ctx.globalAlpha = this.life / 30;
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.globalAlpha = 1;
-            }
-        }
-        
-        function createParticles(x, y, color, count = 10) {
+        // Particles
+        function createParticles(x, y, color, count) {
             for (let i = 0; i < count; i++) {
-                particles.push(new Particle(x, y, color));
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    radius: Math.random() * 5 + 2,
+                    color: color,
+                    life: 30
+                });
             }
         }
         
-        function updatePlayer() {
-            // Física
-            player.velocityY += gravity;
-            player.y += player.velocityY;
+        // Update
+        function update() {
+            if (gameState !== 'playing') return;
             
-            // Colisão com chão
-            if (player.y + player.height > groundY) {
-                player.y = groundY - player.height;
-                player.velocityY = 0;
-                player.jumping = false;
+            // Player movement
+            player.vx = joystickVector.x * player.speed;
+            
+            if (joystickVector.x !== 0) {
+                player.facing = joystickVector.x > 0 ? 1 : -1;
             }
             
-            // Limites laterais
-            if (player.x < 0) player.x = 0;
-            if (player.x + player.width > canvas.width) {
-                player.x = canvas.width - player.width;
-            }
-        }
-        
-        function drawPlayer() {
-            // Corpo
-            ctx.fillStyle = player.color;
-            ctx.fillRect(player.x, player.y, player.width, player.height);
+            // Physics
+            player.vy += GRAVITY;
+            player.x += player.vx;
+            player.y += player.vy;
             
-            // Olhos
-            ctx.fillStyle = '#FFF';
-            ctx.fillRect(player.x + 10, player.y + 10, 10, 10);
-            ctx.fillRect(player.x + 30, player.y + 10, 10, 10);
-            
-            // Pupilas
-            ctx.fillStyle = '#000';
-            ctx.fillRect(player.x + 15, player.y + 15, 5, 5);
-            ctx.fillRect(player.x + 35, player.y + 15, 5, 5);
-            
-            // Sombra
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.fillRect(player.x + 5, groundY + 5, player.width - 10, 10);
-        }
-        
-        function checkCollisions() {
-            // Colisão com obstáculos
-            for (let obs of obstacles) {
-                if (player.x < obs.x + obs.width &&
-                    player.x + player.width > obs.x &&
-                    player.y < obs.y + obs.height &&
-                    player.y + player.height > obs.y) {
-                    gameOver();
+            // Platform collision
+            player.grounded = false;
+            for (let plat of platforms) {
+                if (player.x + player.width > plat.x &&
+                    player.x < plat.x + plat.width &&
+                    player.y + player.height > plat.y &&
+                    player.y + player.height < plat.y + plat.height + player.vy + 10) {
+                    
+                    player.y = plat.y - player.height;
+                    player.vy = 0;
+                    player.grounded = true;
+                    player.jumping = false;
                 }
             }
             
-            // Colisão com moedas
+            // Screen bounds
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+            
+            // Fall death
+            if (player.y > canvas.height) {
+                loseLife();
+            }
+            
+            // Coins
             for (let coin of coins) {
                 if (!coin.collected) {
-                    const dist = Math.hypot(
-                        player.x + player.width/2 - coin.x,
-                        player.y + player.height/2 - coin.y
-                    );
+                    const dx = (player.x + player.width/2) - coin.x;
+                    const dy = (player.y + player.height/2) - coin.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
                     
                     if (dist < player.width/2 + coin.radius) {
                         coin.collected = true;
                         score += 10;
-                        updateScore();
-                        createParticles(coin.x, coin.y, '#FFD700', 15);
+                        updateUI();
+                        createParticles(coin.x, coin.y, '#ffd700', 10);
                     }
                 }
             }
+            
+            // Enemies
+            for (let enemy of enemies) {
+                enemy.x += enemy.vx;
+                if (enemy.x <= enemy.minX || enemy.x + enemy.width >= enemy.maxX) {
+                    enemy.vx *= -1;
+                }
+                
+                // Collision with player
+                if (player.x + player.width > enemy.x &&
+                    player.x < enemy.x + enemy.width &&
+                    player.y + player.height > enemy.y &&
+                    player.y < enemy.y + enemy.height) {
+                    
+                    // Jump on enemy
+                    if (player.vy > 0 && player.y + player.height < enemy.y + 20) {
+                        enemies = enemies.filter(e => e !== enemy);
+                        player.vy = JUMP_FORCE * 0.7;
+                        score += 50;
+                        updateUI();
+                        createParticles(enemy.x + enemy.width/2, enemy.y, '#ff4444', 15);
+                    } else {
+                        loseLife();
+                    }
+                }
+            }
+            
+            // Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.3;
+                p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+            
+            // Check level complete
+            if (coins.every(c => c.collected) && enemies.length === 0) {
+                level++;
+                generateLevel();
+                updateUI();
+            }
         }
         
-        function updateScore() {
-            document.getElementById('score').textContent = `Score: ${score}`;
+        function loseLife() {
+            lives--;
+            updateUI();
+            createParticles(player.x + player.width/2, player.y + player.height/2, '#ff4444', 20);
             
-            // Aumentar dificuldade
-            if (score % 100 === 0 && score > 0) {
-                gameSpeed += 0.5;
+            if (lives <= 0) {
+                gameOver();
+            } else {
+                player.x = 100;
+                player.y = 300;
+                player.vx = 0;
+                player.vy = 0;
             }
         }
         
         function gameOver() {
-            gameRunning = false;
-            alert(`Game Over! Score final: ${score}`);
+            gameState = 'gameover';
+            document.getElementById('finalScore').textContent = `Score: ${score}`;
+            document.getElementById('gameOver').style.display = 'flex';
         }
         
-        function restartGame() {
-            score = 0;
-            gameSpeed = 3;
-            player.x = 100;
-            player.y = 450;
-            player.velocityY = 0;
-            obstacles = [];
-            coins = [];
-            particles = [];
-            updateScore();
-            gameRunning = true;
-            gamePaused = false;
+        function updateUI() {
+            document.getElementById('scoreDisplay').textContent = `🪙 ${score}`;
+            document.getElementById('levelDisplay').textContent = `Nível ${level}`;
+            document.getElementById('livesDisplay').textContent = '❤️'.repeat(lives);
         }
         
-        function pauseGame() {
-            gamePaused = !gamePaused;
-            document.querySelector('button:nth-of-type(2)').textContent = 
-                gamePaused ? '▶️ Continuar' : '⏸️ Pausar';
-        }
-        
-        function gameLoop() {
-            if (!gameRunning || gamePaused) {
-                requestAnimationFrame(gameLoop);
-                return;
-            }
-            
-            // Limpar canvas
+        // Draw
+        function draw() {
+            // Background
             ctx.fillStyle = '#1a1a2e';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Desenhar chão
-            ctx.fillStyle = '#654321';
-            ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
-            
-            // Grama
-            ctx.fillStyle = '#228B22';
-            ctx.fillRect(0, groundY, canvas.width, 10);
-            
-            // Atualizar e desenhar player
-            updatePlayer();
-            drawPlayer();
-            
-            // Spawnar obstáculos
-            obstacleTimer++;
-            if (obstacleTimer > 100) {
-                obstacles.push(new Obstacle());
-                obstacleTimer = 0;
+            // Platforms
+            for (let plat of platforms) {
+                ctx.fillStyle = plat.color;
+                ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
             }
             
-            // Spawnar moedas
-            coinTimer++;
-            if (coinTimer > 80) {
-                coins.push(new Coin());
-                coinTimer = Math.random() * 30;
-            }
-            
-            // Atualizar obstáculos
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                obstacles[i].update();
-                obstacles[i].draw();
-                
-                if (obstacles[i].x + obstacles[i].width < 0) {
-                    obstacles.splice(i, 1);
-                    score += 5;
-                    updateScore();
+            // Coins
+            for (let coin of coins) {
+                if (!coin.collected) {
+                    ctx.fillStyle = '#ffd700';
+                    ctx.beginPath();
+                    ctx.arc(coin.x, coin.y, coin.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(coin.x - 4, coin.y - 4, 4, 0, Math.PI * 2);
+                    ctx.fill();
                 }
             }
             
-            // Atualizar moedas
-            for (let i = coins.length - 1; i >= 0; i--) {
-                coins[i].update();
-                coins[i].draw();
+            // Enemies
+            for (let enemy of enemies) {
+                ctx.fillStyle = '#ff4444';
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
                 
-                if (coins[i].x + coins[i].radius < 0) {
-                    coins.splice(i, 1);
-                }
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(enemy.x + 8, enemy.y + 8, 8, 8);
+                ctx.fillRect(enemy.x + enemy.width - 16, enemy.y + 8, 8, 8);
             }
             
-            // Atualizar partículas
-            for (let i = particles.length - 1; i >= 0; i--) {
-                particles[i].update();
-                particles[i].draw();
-                
-                if (particles[i].life <= 0) {
-                    particles.splice(i, 1);
-                }
+            // Player
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            // Player eyes
+            ctx.fillStyle = '#fff';
+            const eyeX = player.facing > 0 ? player.x + 30 : player.x + 10;
+            ctx.fillRect(eyeX, player.y + 12, 10, 10);
+            
+            ctx.fillStyle = '#000';
+            ctx.fillRect(eyeX + 3, player.y + 15, 4, 4);
+            
+            // Particles
+            for (let p of particles) {
+                ctx.globalAlpha = p.life / 30;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
             }
-            
-            // Verificar colisões
-            checkCollisions();
-            
+            ctx.globalAlpha = 1;
+        }
+        
+        // Game Loop
+        function gameLoop() {
+            update();
+            draw();
             requestAnimationFrame(gameLoop);
         }
         
-        // Controles
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && !player.jumping) {
-                player.velocityY = jumpPower;
-                player.jumping = true;
-            }
+        // Menu
+        document.getElementById('resumeBtn').onclick = () => {
+            document.getElementById('pauseMenu').style.display = 'none';
+            gameState = 'playing';
+        };
+        
+        document.getElementById('restartBtn').onclick = restart;
+        document.getElementById('retryBtn').onclick = restart;
+        
+        function restart() {
+            document.getElementById('pauseMenu').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'none';
             
-            if (e.code === 'KeyA') {
-                player.x -= player.speed * 2;
-            }
-            
-            if (e.code === 'KeyD') {
-                player.x += player.speed * 2;
-            }
-        });
+            score = 0;
+            level = 1;
+            lives = 3;
+            player.x = 100;
+            player.y = 300;
+            player.vx = 0;
+            player.vy = 0;
+            particles = [];
+            generateLevel();
+            updateUI();
+            gameState = 'playing';
+        }
         
-        canvas.addEventListener('click', () => {
-            if (!gameRunning) {
-                restartGame();
-            } else if (!player.jumping) {
-                player.velocityY = jumpPower;
-                player.jumping = true;
-            }
-        });
-        
-        // Touch para mobile
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (!gameRunning) {
-                restartGame();
-            } else if (!player.jumping) {
-                player.velocityY = jumpPower;
-                player.jumping = true;
-            }
-        });
-        
-        // Iniciar
+        // Start
+        updateUI();
         gameLoop();
+        
+        console.log('✅ Platformer Mobile iniciado!');
     </script>
 </body>
-</html>
-''',
+</html>''',
             "lang": "html",
             "ext": ".html"
         },
         
-        "Unity - Sistema de Inventário": {
-            "code": '''using System.Collections.Generic;
-using UnityEngine;
-
-[System.Serializable]
-public class Item
-{
-    public string itemName;
-    public Sprite icon;
-    public int maxStack = 99;
-    public ItemType type;
+        "PWA Game - Endless Runner": {
+            "code": '''<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>Endless Runner Mobile</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; user-select: none; }
+        body { background: #1a1a2e; overflow: hidden; position: fixed; width: 100%; height: 100%; }
+        #gameCanvas { display: block; width: 100%; height: 100%; }
+        
+        #ui {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 10;
+        }
+        
+        .ui-box {
+            background: rgba(0,0,0,0.7);
+            padding: 10px 25px;
+            border-radius: 25px;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        #startScreen, #gameOverScreen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        
+        #gameOverScreen { display: none; }
+        
+        h1 { color: #667eea; font-size: 48px; margin-bottom: 20px; font-family: Arial; }
+        h2 { color: #ff4444; font-size: 42px; margin-bottom: 20px; font-family: Arial; }
+        
+        .play-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 20px 80px;
+            font-size: 28px;
+            font-weight: bold;
+            border-radius: 40px;
+            margin-top: 30px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(102,126,234,0.5);
+        }
+        
+        .instructions {
+            color: rgba(255,255,255,0.7);
+            font-size: 18px;
+            margin-top: 20px;
+            font-family: Arial;
+        }
+        
+        #finalScore {
+            color: white;
+            font-size: 32px;
+            font-family: Arial;
+        }
+        
+        #highScore {
+            color: #ffd700;
+            font-size: 24px;
+            font-family: Arial;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
     
-    public enum ItemType
-    {
-        Weapon,
-        Consumable,
-        Material,
-        Quest
-    }
-}
-
-[System.Serializable]
-public class InventorySlot
-{
-    public Item item;
-    public int quantity;
+    <div id="ui">
+        <div class="ui-box" id="scoreDisplay">🏃 0</div>
+        <div class="ui-box" id="distanceDisplay">📏 0m</div>
+    </div>
     
-    public InventorySlot(Item _item, int _quantity)
-    {
-        item = _item;
-        quantity = _quantity;
-    }
+    <div id="startScreen">
+        <h1>🏃 ENDLESS RUNNER</h1>
+        <p class="instructions">Toque para pular</p>
+        <p class="instructions">Deslize para baixo para rolar</p>
+        <button class="play-btn" id="startBtn">▶️ JOGAR</button>
+    </div>
     
-    public bool CanAddItem(Item _item)
-    {
-        return item == _item && quantity < item.maxStack;
-    }
-}
-
-public class InventorySystem : MonoBehaviour
-{
-    public static InventorySystem Instance;
+    <div id="gameOverScreen">
+        <h2>💀 GAME OVER</h2>
+        <div id="finalScore">Score: 0</div>
+        <div id="highScore">🏆 Recorde: 0</div>
+        <button class="play-btn" id="retryBtn">🔄 JOGAR NOVAMENTE</button>
+    </div>
     
-    public List<InventorySlot> inventorySlots = new List<InventorySlot>();
-    public int maxSlots = 20;
-    
-    // Eventos
-    public delegate void OnInventoryChanged();
-    public event OnInventoryChanged onInventoryChangedCallback;
-    
-    void Awake()
-    {
-        if (Instance == null)
-            Instance = this;
-        else
-            Destroy(gameObject);
-    }
-    
-    public bool AddItem(Item item, int quantity = 1)
-    {
-        // Verificar se já existe no inventário
-        foreach (InventorySlot slot in inventorySlots)
-        {
-            if (slot.item == item && slot.quantity < item.maxStack)
-            {
-                int amountToAdd = Mathf.Min(quantity, item.maxStack - slot.quantity);
-                slot.quantity += amountToAdd;
-                quantity -= amountToAdd;
-                
-                if (quantity <= 0)
-                {
-                    onInventoryChangedCallback?.Invoke();
-                    return true;
-                }
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+        
+        // Game variables
+        let gameRunning = false;
+        let score = 0;
+        let distance = 0;
+        let highScore = localStorage.getItem('endlessRunnerHighScore') || 0;
+        let speed = 8;
+        let gravity = 0.8;
+        
+        // Ground
+        const groundY = canvas.height * 0.75;
+        
+        // Player
+        const player = {
+            x: 100,
+            y: groundY - 60,
+            width: 50,
+            height: 60,
+            vy: 0,
+            jumping: false,
+            rolling: false,
+            rollTimer: 0
+        };
+        
+        // Obstacles
+        let obstacles = [];
+        let coins = [];
+        let particles = [];
+        let clouds = [];
+        
+        // Initialize clouds
+        for (let i = 0; i < 5; i++) {
+            clouds.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * groundY * 0.5,
+                width: Math.random() * 100 + 50,
+                speed: Math.random() * 1 + 0.5
+            });
+        }
+        
+        // Touch controls
+        let touchStartY = 0;
+        
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            touchStartY = e.touches[0].clientY;
+            
+            if (gameRunning && !player.jumping && !player.rolling) {
+                player.vy = -18;
+                player.jumping = true;
+                createParticles(player.x + player.width/2, player.y + player.height, '#00ff88', 5);
+            }
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touchY = e.touches[0].clientY;
+            
+            if (touchY - touchStartY > 50 && !player.rolling && player.y >= groundY - 60) {
+                player.rolling = true;
+                player.rollTimer = 30;
+            }
+        });
+        
+        function createParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    radius: Math.random() * 4 + 2,
+                    color,
+                    life: 25
+                });
             }
         }
         
-        // Adicionar em novo slot
-        while (quantity > 0 && inventorySlots.Count < maxSlots)
-        {
-            int amountToAdd = Mathf.Min(quantity, item.maxStack);
-            inventorySlots.Add(new InventorySlot(item, amountToAdd));
-            quantity -= amountToAdd;
+        function spawnObstacle() {
+            const types = ['small', 'tall', 'flying'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            let obstacle = { x: canvas.width + 50, type };
+            
+            if (type === 'small') {
+                obstacle.y = groundY - 40;
+                obstacle.width = 30;
+                obstacle.height = 40;
+            } else if (type === 'tall') {
+                obstacle.y = groundY - 80;
+                obstacle.width = 30;
+                obstacle.height = 80;
+            } else {
+                obstacle.y = groundY - 120;
+                obstacle.width = 50;
+                obstacle.height = 30;
+            }
+            
+            obstacles.push(obstacle);
         }
         
-        onInventoryChangedCallback?.Invoke();
-        return quantity <= 0;
-    }
-    
-    public bool RemoveItem(Item item, int quantity = 1)
-    {
-        for (int i = inventorySlots.Count - 1; i >= 0; i--)
-        {
-            if (inventorySlots[i].item == item)
-            {
-                if (inventorySlots[i].quantity > quantity)
-                {
-                    inventorySlots[i].quantity -= quantity;
-                    onInventoryChangedCallback?.Invoke();
-                    return true;
+        function spawnCoin() {
+            coins.push({
+                x: canvas.width + 50,
+                y: groundY - 100 - Math.random() * 100,
+                radius: 15,
+                collected: false
+            });
+        }
+        
+        function update() {
+            if (!gameRunning) return;
+            
+            // Increase difficulty
+            speed = 8 + Math.floor(distance / 500) * 0.5;
+            
+            // Player physics
+            player.vy += gravity;
+            player.y += player.vy;
+            
+            if (player.y >= groundY - (player.rolling ? 30 : 60)) {
+                player.y = groundY - (player.rolling ? 30 : 60);
+                player.vy = 0;
+                player.jumping = false;
+            }
+            
+            if (player.rolling) {
+                player.rollTimer--;
+                if (player.rollTimer <= 0) player.rolling = false;
+            }
+            
+            // Spawn obstacles
+            if (Math.random() < 0.02) spawnObstacle();
+            if (Math.random() < 0.03) spawnCoin();
+            
+            // Update obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].x -= speed;
+                
+                if (obstacles[i].x + obstacles[i].width < 0) {
+                    obstacles.splice(i, 1);
+                    continue;
                 }
-                else
-                {
-                    quantity -= inventorySlots[i].quantity;
-                    inventorySlots.RemoveAt(i);
+                
+                // Collision
+                const obs = obstacles[i];
+                const playerHeight = player.rolling ? 30 : 60;
+                const playerY = player.rolling ? groundY - 30 : player.y;
+                
+                if (player.x + player.width > obs.x &&
+                    player.x < obs.x + obs.width &&
+                    playerY + playerHeight > obs.y &&
+                    playerY < obs.y + obs.height) {
+                    gameOver();
+                }
+            }
+            
+            // Update coins
+            for (let i = coins.length - 1; i >= 0; i--) {
+                coins[i].x -= speed;
+                
+                if (coins[i].x + coins[i].radius < 0) {
+                    coins.splice(i, 1);
+                    continue;
+                }
+                
+                if (!coins[i].collected) {
+                    const dx = (player.x + player.width/2) - coins[i].x;
+                    const dy = (player.y + 30) - coins[i].y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
                     
-                    if (quantity <= 0)
-                    {
-                        onInventoryChangedCallback?.Invoke();
-                        return true;
+                    if (dist < 40) {
+                        coins[i].collected = true;
+                        score += 10;
+                        createParticles(coins[i].x, coins[i].y, '#ffd700', 10);
                     }
                 }
             }
+            
+            // Update clouds
+            for (let cloud of clouds) {
+                cloud.x -= cloud.speed;
+                if (cloud.x + cloud.width < 0) {
+                    cloud.x = canvas.width + 50;
+                    cloud.y = Math.random() * groundY * 0.5;
+                }
+            }
+            
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2;
+                p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+            
+            distance += speed / 10;
+            updateUI();
         }
         
-        onInventoryChangedCallback?.Invoke();
-        return quantity <= 0;
-    }
-    
-    public int GetItemCount(Item item)
-    {
-        int count = 0;
-        foreach (InventorySlot slot in inventorySlots)
-        {
-            if (slot.item == item)
-                count += slot.quantity;
+        function draw() {
+            // Sky gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#1a1a2e');
+            gradient.addColorStop(1, '#16213e');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Clouds
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            for (let cloud of clouds) {
+                ctx.beginPath();
+                ctx.ellipse(cloud.x, cloud.y, cloud.width/2, 20, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Ground
+            ctx.fillStyle = '#4a4a6a';
+            ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+            
+            // Ground line
+            ctx.fillStyle = '#5a5a8a';
+            ctx.fillRect(0, groundY, canvas.width, 5);
+            
+            // Obstacles
+            for (let obs of obstacles) {
+                ctx.fillStyle = '#ff4444';
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            }
+            
+            // Coins
+            for (let coin of coins) {
+                if (!coin.collected) {
+                    ctx.fillStyle = '#ffd700';
+                    ctx.beginPath();
+                    ctx.arc(coin.x, coin.y, coin.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(coin.x - 4, coin.y - 4, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            
+            // Player
+            ctx.fillStyle = '#00ff88';
+            const playerHeight = player.rolling ? 30 : 60;
+            const playerY = player.rolling ? groundY - 30 : player.y;
+            ctx.fillRect(player.x, playerY, player.width, playerHeight);
+            
+            // Player eye
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(player.x + 30, playerY + (player.rolling ? 5 : 15), 12, 12);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(player.x + 35, playerY + (player.rolling ? 8 : 18), 5, 5);
+            
+            // Particles
+            for (let p of particles) {
+                ctx.globalAlpha = p.life / 25;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
         }
-        return count;
-    }
-    
-    public bool HasItem(Item item, int quantity = 1)
-    {
-        return GetItemCount(item) >= quantity;
-    }
-    
-    public void SortInventory()
-    {
-        inventorySlots.Sort((a, b) => a.item.itemName.CompareTo(b.item.itemName));
-        onInventoryChangedCallback?.Invoke();
-    }
-    
-    public void ClearInventory()
-    {
-        inventorySlots.Clear();
-        onInventoryChangedCallback?.Invoke();
-    }
-}
-''',
-            "lang": "csharp",
-            "ext": ".cs"
+        
+        function updateUI() {
+            document.getElementById('scoreDisplay').textContent = `🪙 ${score}`;
+            document.getElementById('distanceDisplay').textContent = `📏 ${Math.floor(distance)}m`;
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('endlessRunnerHighScore', highScore);
+            }
+            
+            document.getElementById('finalScore').textContent = `Score: ${score}`;
+            document.getElementById('highScore').textContent = `🏆 Recorde: ${highScore}`;
+            document.getElementById('gameOverScreen').style.display = 'flex';
+        }
+        
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameOverScreen').style.display = 'none';
+            
+            score = 0;
+            distance = 0;
+            speed = 8;
+            obstacles = [];
+            coins = [];
+            particles = [];
+            player.y = groundY - 60;
+            player.vy = 0;
+            player.jumping = false;
+            player.rolling = false;
+            
+            gameRunning = true;
+            updateUI();
+        }
+        
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Events
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('retryBtn').addEventListener('click', startGame);
+        
+        // Start
+        gameLoop();
+    </script>
+</body>
+</html>''',
+            "lang": "html",
+            "ext": ".html"
         }
     },
     
-    "🤖 Bots": {
-        "Discord Bot Avançado": {
+    "🎮 Godot 4.x": {
+        "Player Controller Completo": {
+            "code": '''extends CharacterBody2D
+## Player Controller Profissional para Godot 4.x
+## Controles: WASD ou Arrows, Espaço para pular
+
+# Configurações exportáveis
+@export_group("Movimento")
+@export var speed: float = 300.0
+@export var acceleration: float = 2000.0
+@export var friction: float = 1500.0
+@export var air_resistance: float = 200.0
+
+@export_group("Pulo")
+@export var jump_velocity: float = -450.0
+@export var double_jump_velocity: float = -350.0
+@export var max_jumps: int = 2
+@export var coyote_time: float = 0.15
+@export var jump_buffer_time: float = 0.1
+
+@export_group("Física")
+@export var gravity_multiplier: float = 1.0
+@export var fall_gravity_multiplier: float = 1.5
+@export var max_fall_speed: float = 800.0
+
+# Variáveis internas
+var gravity: float = ProjectSettings.get_setting("physics/2d/default_gravity")
+var jumps_remaining: int = max_jumps
+var coyote_timer: float = 0.0
+var jump_buffer_timer: float = 0.0
+var was_on_floor: bool = false
+var facing_direction: int = 1
+
+# Referências (criar nós com estes nomes)
+@onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
+@onready var collision: CollisionShape2D = $CollisionShape2D
+
+# Sinais
+signal jumped
+signal landed
+signal double_jumped
+signal took_damage(amount: int)
+signal died
+
+func _ready() -> void:
+    jumps_remaining = max_jumps
+    print("✅ Player Controller inicializado!")
+
+func _physics_process(delta: float) -> void:
+    handle_timers(delta)
+    handle_gravity(delta)
+    handle_jump()
+    handle_movement(delta)
+    handle_animations()
+    
+    was_on_floor = is_on_floor()
+    move_and_slide()
+
+func handle_timers(delta: float) -> void:
+    # Coyote time (permite pular logo após cair de plataforma)
+    if was_on_floor and not is_on_floor():
+        coyote_timer = coyote_time
+    elif is_on_floor():
+        coyote_timer = 0.0
+        jumps_remaining = max_jumps
+    else:
+        coyote_timer -= delta
+    
+    # Jump buffer (registra input de pulo antes de tocar o chão)
+    if Input.is_action_just_pressed("ui_accept"):
+        jump_buffer_timer = jump_buffer_time
+    else:
+        jump_buffer_timer -= delta
+
+func handle_gravity(delta: float) -> void:
+    if not is_on_floor():
+        var current_gravity = gravity * gravity_multiplier
+        
+        # Gravidade maior ao cair
+        if velocity.y > 0:
+            current_gravity *= fall_gravity_multiplier
+        
+        velocity.y += current_gravity * delta
+        velocity.y = min(velocity.y, max_fall_speed)
+
+func handle_jump() -> void:
+    var can_coyote_jump = coyote_timer > 0
+    var has_buffered_jump = jump_buffer_timer > 0
+    
+    # Pulo normal ou com coyote time
+    if (is_on_floor() or can_coyote_jump) and (Input.is_action_just_pressed("ui_accept") or has_buffered_jump):
+        perform_jump(jump_velocity)
+        coyote_timer = 0.0
+        jump_buffer_timer = 0.0
+        jumped.emit()
+    
+    # Double jump
+    elif Input.is_action_just_pressed("ui_accept") and jumps_remaining > 0 and not is_on_floor():
+        perform_jump(double_jump_velocity)
+        double_jumped.emit()
+    
+    # Soltar botão = pulo mais curto
+    if Input.is_action_just_released("ui_accept") and velocity.y < 0:
+        velocity.y *= 0.5
+
+func perform_jump(power: float) -> void:
+    velocity.y = power
+    jumps_remaining -= 1
+    spawn_jump_particles()
+
+func handle_movement(delta: float) -> void:
+    var direction = Input.get_axis("ui_left", "ui_right")
+    
+    if direction != 0:
+        facing_direction = sign(direction)
+        
+        if is_on_floor():
+            velocity.x = move_toward(velocity.x, direction * speed, acceleration * delta)
+        else:
+            velocity.x = move_toward(velocity.x, direction * speed, air_resistance * delta)
+    else:
+        if is_on_floor():
+            velocity.x = move_toward(velocity.x, 0, friction * delta)
+        else:
+            velocity.x = move_toward(velocity.x, 0, air_resistance * 0.5 * delta)
+
+func handle_animations() -> void:
+    if not sprite:
+        return
+    
+    # Flip sprite baseado na direção
+    sprite.flip_h = facing_direction < 0
+    
+    # Animações
+    if not is_on_floor():
+        if velocity.y < 0:
+            play_animation("jump")
+        else:
+            play_animation("fall")
+    elif abs(velocity.x) > 10:
+        play_animation("run")
+    else:
+        play_animation("idle")
+
+func play_animation(anim_name: String) -> void:
+    if sprite and sprite.sprite_frames and sprite.sprite_frames.has_animation(anim_name):
+        if sprite.animation != anim_name:
+            sprite.play(anim_name)
+
+func spawn_jump_particles() -> void:
+    # Implementar sistema de partículas aqui
+    pass
+
+# Funções públicas
+func take_damage(amount: int) -> void:
+    took_damage.emit(amount)
+    play_animation("hurt")
+    
+    # Knockback
+    velocity.y = jump_velocity * 0.5
+    velocity.x = -facing_direction * speed * 0.5
+
+func die() -> void:
+    died.emit()
+    set_physics_process(false)
+    play_animation("death")
+
+func respawn(pos: Vector2) -> void:
+    global_position = pos
+    velocity = Vector2.ZERO
+    set_physics_process(true)
+    play_animation("idle")
+''',
+            "lang": "gdscript",
+            "ext": ".gd"
+        },
+        
+        "Sistema de Inventário": {
+            "code": '''extends Node
+class_name InventorySystem
+## Sistema de Inventário Completo para Godot 4.x
+
+signal item_added(item: InventoryItem, slot: int)
+signal item_removed(item: InventoryItem, slot: int)
+signal item_used(item: InventoryItem)
+signal inventory_changed
+
+const MAX_SLOTS: int = 20
+const MAX_STACK: int = 99
+
+var slots: Array[InventorySlot] = []
+
+class InventoryItem:
+    var id: String
+    var name: String
+    var description: String
+    var icon: Texture2D
+    var max_stack: int = 99
+    var item_type: ItemType
+    var rarity: Rarity
+    var stats: Dictionary = {}
+    
+    enum ItemType { WEAPON, ARMOR, CONSUMABLE, MATERIAL, QUEST }
+    enum Rarity { COMMON, UNCOMMON, RARE, EPIC, LEGENDARY }
+    
+    func _init(item_id: String, item_name: String, type: ItemType = ItemType.MATERIAL):
+        id = item_id
+        name = item_name
+        item_type = type
+        rarity = Rarity.COMMON
+    
+    func get_rarity_color() -> Color:
+        match rarity:
+            Rarity.COMMON: return Color.WHITE
+            Rarity.UNCOMMON: return Color.GREEN
+            Rarity.RARE: return Color.BLUE
+            Rarity.EPIC: return Color.PURPLE
+            Rarity.LEGENDARY: return Color.ORANGE
+            _: return Color.WHITE
+
+class InventorySlot:
+    var item: InventoryItem = null
+    var quantity: int = 0
+    
+    func is_empty() -> bool:
+        return item == null or quantity <= 0
+    
+    func can_add(new_item: InventoryItem, amount: int = 1) -> bool:
+        if is_empty():
+            return true
+        return item.id == new_item.id and quantity + amount <= item.max_stack
+    
+    func add(new_item: InventoryItem, amount: int = 1) -> int:
+        if is_empty():
+            item = new_item
+            quantity = min(amount, new_item.max_stack)
+            return amount - quantity
+        
+        if item.id != new_item.id:
+            return amount
+        
+        var space = item.max_stack - quantity
+        var to_add = min(amount, space)
+        quantity += to_add
+        return amount - to_add
+    
+    func remove(amount: int = 1) -> int:
+        var removed = min(amount, quantity)
+        quantity -= removed
+        
+        if quantity <= 0:
+            item = null
+            quantity = 0
+        
+        return removed
+    
+    func clear() -> void:
+        item = null
+        quantity = 0
+
+func _ready() -> void:
+    # Inicializar slots vazios
+    for i in range(MAX_SLOTS):
+        slots.append(InventorySlot.new())
+    print("✅ Sistema de Inventário inicializado com ", MAX_SLOTS, " slots")
+
+func add_item(item: InventoryItem, amount: int = 1) -> int:
+    var remaining = amount
+    
+    # Primeiro, tentar adicionar em slots existentes com o mesmo item
+    for i in range(slots.size()):
+        if slots[i].item and slots[i].item.id == item.id:
+            remaining = slots[i].add(item, remaining)
+            if remaining <= 0:
+                item_added.emit(item, i)
+                inventory_changed.emit()
+                return 0
+    
+    # Depois, adicionar em slots vazios
+    for i in range(slots.size()):
+        if slots[i].is_empty():
+            remaining = slots[i].add(item, remaining)
+            if remaining <= 0:
+                item_added.emit(item, i)
+                inventory_changed.emit()
+                return 0
+    
+    inventory_changed.emit()
+    return remaining  # Retorna quantidade que não coube
+
+func remove_item(item_id: String, amount: int = 1) -> bool:
+    var remaining = amount
+    
+    for i in range(slots.size() - 1, -1, -1):
+        if slots[i].item and slots[i].item.id == item_id:
+            var removed = slots[i].remove(remaining)
+            remaining -= removed
+            
+            if slots[i].is_empty():
+                item_removed.emit(slots[i].item, i)
+            
+            if remaining <= 0:
+                inventory_changed.emit()
+                return true
+    
+    inventory_changed.emit()
+    return remaining <= 0
+
+func has_item(item_id: String, amount: int = 1) -> bool:
+    return get_item_count(item_id) >= amount
+
+func get_item_count(item_id: String) -> int:
+    var count = 0
+    for slot in slots:
+        if slot.item and slot.item.id == item_id:
+            count += slot.quantity
+    return count
+
+func get_item_at(index: int) -> InventorySlot:
+    if index >= 0 and index < slots.size():
+        return slots[index]
+    return null
+
+func swap_slots(index1: int, index2: int) -> void:
+    if index1 < 0 or index1 >= slots.size():
+        return
+    if index2 < 0 or index2 >= slots.size():
+        return
+    
+    var temp_item = slots[index1].item
+    var temp_quantity = slots[index1].quantity
+    
+    slots[index1].item = slots[index2].item
+    slots[index1].quantity = slots[index2].quantity
+    
+    slots[index2].item = temp_item
+    slots[index2].quantity = temp_quantity
+    
+    inventory_changed.emit()
+
+func use_item(index: int) -> bool:
+    var slot = get_item_at(index)
+    if slot and not slot.is_empty():
+        if slot.item.item_type == InventoryItem.ItemType.CONSUMABLE:
+            item_used.emit(slot.item)
+            slot.remove(1)
+            inventory_changed.emit()
+            return true
+    return false
+
+func sort_inventory() -> void:
+    # Ordenar por tipo e depois por nome
+    var items_data = []
+    
+    for slot in slots:
+        if not slot.is_empty():
+            items_data.append({
+                "item": slot.item,
+                "quantity": slot.quantity
+            })
+        slot.clear()
+    
+    items_data.sort_custom(func(a, b):
+        if a.item.item_type != b.item.item_type:
+            return a.item.item_type < b.item.item_type
+        return a.item.name < b.item.name
+    )
+    
+    var slot_index = 0
+    for data in items_data:
+        if slot_index < slots.size():
+            slots[slot_index].item = data.item
+            slots[slot_index].quantity = data.quantity
+            slot_index += 1
+    
+    inventory_changed.emit()
+
+func clear_inventory() -> void:
+    for slot in slots:
+        slot.clear()
+    inventory_changed.emit()
+
+func get_all_items() -> Array:
+    var items = []
+    for slot in slots:
+        if not slot.is_empty():
+            items.append({
+                "item": slot.item,
+                "quantity": slot.quantity
+            })
+    return items
+
+func save_inventory() -> Dictionary:
+    var save_data = []
+    for slot in slots:
+        if slot.is_empty():
+            save_data.append(null)
+        else:
+            save_data.append({
+                "id": slot.item.id,
+                "quantity": slot.quantity
+            })
+    return {"slots": save_data}
+
+func load_inventory(data: Dictionary, item_database: Dictionary) -> void:
+    clear_inventory()
+    
+    if not data.has("slots"):
+        return
+    
+    for i in range(min(data.slots.size(), slots.size())):
+        if data.slots[i] != null:
+            var item_id = data.slots[i].id
+            if item_database.has(item_id):
+                slots[i].item = item_database[item_id]
+                slots[i].quantity = data.slots[i].quantity
+    
+    inventory_changed.emit()
+''',
+            "lang": "gdscript",
+            "ext": ".gd"
+        }
+    },
+    
+    "🛡️ Game Guardian": {
+        "Hack de Moedas/Dinheiro": {
+            "code": '''--[[
+    Game Guardian Script - Hack de Moedas/Dinheiro
+    Compatível com: Games que usam valores inteiros
+    Autor: ScriptMaster AI
+    
+    INSTRUÇÕES:
+    1. Abra o jogo e anote a quantidade atual de moedas
+    2. Execute este script no Game Guardian
+    3. Digite o valor atual quando solicitado
+    4. Gaste algumas moedas no jogo
+    5. Digite o novo valor
+    6. Repita até encontrar o endereço
+    7. Modifique para o valor desejado
+]]
+
+gg.clearResults()
+gg.setVisible(false)
+
+-- Configurações
+local SCRIPT_NAME = "💰 Coin Hack v1.0"
+local SEARCH_TYPES = {
+    gg.TYPE_DWORD,    -- Int32 (mais comum)
+    gg.TYPE_FLOAT,    -- Float (alguns jogos)
+    gg.TYPE_DOUBLE,   -- Double (jogos Unity)
+    gg.TYPE_QWORD     -- Int64 (valores grandes)
+}
+
+-- Menu principal
+function mainMenu()
+    local menu = gg.choice({
+        "🔍 Buscar Valor (Primeira Busca)",
+        "🔎 Refinar Busca (Valor Mudou)",
+        "💎 Modificar Valores Encontrados",
+        "🔄 Congelar Valores",
+        "❄️ Descongelar Valores",
+        "🗑️ Limpar Resultados",
+        "❌ Sair"
+    }, nil, SCRIPT_NAME)
+    
+    return menu
+end
+
+-- Buscar valor
+function searchValue()
+    local value = gg.prompt(
+        {"Digite o valor atual de moedas:"},
+        {[1] = ""},
+        {[1] = "number"}
+    )
+    
+    if value == nil then
+        gg.toast("❌ Busca cancelada")
+        return
+    end
+    
+    gg.clearResults()
+    gg.toast("🔍 Buscando valor: " .. value[1])
+    
+    -- Buscar em todos os tipos
+    for i, searchType in ipairs(SEARCH_TYPES) do
+        gg.searchNumber(value[1], searchType)
+    end
+    
+    local count = gg.getResultsCount()
+    gg.toast("✅ Encontrados: " .. count .. " resultados")
+    
+    if count > 1000 then
+        gg.alert("⚠️ Muitos resultados (" .. count .. ")\n\nGaste algumas moedas no jogo e use 'Refinar Busca' com o novo valor.")
+    elseif count == 0 then
+        gg.alert("❌ Nenhum resultado encontrado.\n\nTente:\n- Verificar se o valor está correto\n- O jogo pode usar encriptação")
+    else
+        gg.alert("✅ " .. count .. " resultados encontrados!\n\nSe ainda são muitos, refine a busca.")
+    end
+end
+
+-- Refinar busca
+function refineSearch()
+    local count = gg.getResultsCount()
+    
+    if count == 0 then
+        gg.alert("❌ Nenhum resultado para refinar.\n\nFaça uma busca primeiro!")
+        return
+    end
+    
+    local value = gg.prompt(
+        {"Digite o NOVO valor de moedas:"},
+        {[1] = ""},
+        {[1] = "number"}
+    )
+    
+    if value == nil then
+        gg.toast("❌ Refinamento cancelado")
+        return
+    end
+    
+    gg.toast("🔎 Refinando para: " .. value[1])
+    gg.refineNumber(value[1], gg.TYPE_DWORD)
+    
+    local newCount = gg.getResultsCount()
+    gg.toast("✅ Restam: " .. newCount .. " resultados")
+    
+    if newCount <= 10 and newCount > 0 then
+        gg.alert("🎯 Poucos resultados!\n\nAgora use 'Modificar Valores' para alterar.")
+    end
+end
+
+-- Modificar valores
+function modifyValues()
+    local count = gg.getResultsCount()
+    
+    if count == 0 then
+        gg.alert("❌ Nenhum resultado para modificar!")
+        return
+    end
+    
+    local newValue = gg.prompt(
+        {"Digite o NOVO valor desejado:", "Quantidade de resultados a modificar (0 = todos):"},
+        {[1] = "999999", [2] = "0"},
+        {[1] = "number", [2] = "number"}
+    )
+    
+    if newValue == nil then
+        gg.toast("❌ Modificação cancelada")
+        return
+    end
+    
+    local amount = tonumber(newValue[2])
+    if amount == 0 then amount = count end
+    
+    local results = gg.getResults(amount)
+    
+    for i, v in ipairs(results) do
+        v.value = newValue[1]
+        v.freeze = false
+    end
+    
+    gg.setValues(results)
+    gg.toast("✅ " .. #results .. " valores modificados para " .. newValue[1])
+end
+
+-- Congelar valores
+function freezeValues()
+    local count = gg.getResultsCount()
+    
+    if count == 0 then
+        gg.alert("❌ Nenhum resultado para congelar!")
+        return
+    end
+    
+    local freezeValue = gg.prompt(
+        {"Valor para congelar:"},
+        {[1] = "999999"},
+        {[1] = "number"}
+    )
+    
+    if freezeValue == nil then
+        gg.toast("❌ Congelamento cancelado")
+        return
+    end
+    
+    local results = gg.getResults(100)
+    
+    for i, v in ipairs(results) do
+        v.value = freezeValue[1]
+        v.freeze = true
+    end
+    
+    gg.setValues(results)
+    gg.addListItems(results)
+    gg.toast("❄️ " .. #results .. " valores congelados em " .. freezeValue[1])
+end
+
+-- Descongelar valores
+function unfreezeValues()
+    local list = gg.getListItems()
+    
+    if #list == 0 then
+        gg.alert("❌ Nenhum valor congelado!")
+        return
+    end
+    
+    for i, v in ipairs(list) do
+        v.freeze = false
+    end
+    
+    gg.setValues(list)
+    gg.clearList()
+    gg.toast("🔓 Todos os valores descongelados!")
+end
+
+-- Loop principal
+function main()
+    gg.toast("✅ " .. SCRIPT_NAME .. " carregado!")
+    
+    while true do
+        if gg.isVisible() then
+            local choice = mainMenu()
+            
+            if choice == 1 then
+                searchValue()
+            elseif choice == 2 then
+                refineSearch()
+            elseif choice == 3 then
+                modifyValues()
+            elseif choice == 4 then
+                freezeValues()
+            elseif choice == 5 then
+                unfreezeValues()
+            elseif choice == 6 then
+                gg.clearResults()
+                gg.toast("🗑️ Resultados limpos!")
+            elseif choice == 7 then
+                gg.toast("👋 Até logo!")
+                gg.setVisible(false)
+                os.exit()
+            end
+            
+            gg.setVisible(false)
+        end
+        
+        gg.sleep(100)
+    end
+end
+
+main()
+''',
+            "lang": "lua",
+            "ext": ".lua"
+        },
+        
+        "Speed Hack Universal": {
+            "code": '''--[[
+    Game Guardian Script - Speed Hack Universal
+    Funciona com a maioria dos jogos
+    Autor: ScriptMaster AI
+    
+    AVISOS:
+    - Pode causar ban em jogos online
+    - Use apenas em jogos offline/single player
+    - Alguns jogos detectam modificação de velocidade
+]]
+
+gg.clearResults()
+gg.setVisible(false)
+
+local SCRIPT_NAME = "⚡ Speed Hack v2.0"
+
+-- Velocidades predefinidas
+local SPEEDS = {
+    {name = "0.25x (Câmera Lenta)", value = 0.25},
+    {name = "0.5x (Lento)", value = 0.5},
+    {name = "1x (Normal)", value = 1.0},
+    {name = "1.5x (Rápido)", value = 1.5},
+    {name = "2x (Muito Rápido)", value = 2.0},
+    {name = "3x (Ultra Rápido)", value = 3.0},
+    {name = "5x (Extremo)", value = 5.0},
+    {name = "🎮 Velocidade Personalizada", value = -1}
+}
+
+local currentSpeed = 1.0
+
+function showMenu()
+    local menuItems = {}
+    
+    for i, speed in ipairs(SPEEDS) do
+        local prefix = ""
+        if speed.value == currentSpeed then
+            prefix = "✓ "
+        end
+        table.insert(menuItems, prefix .. speed.name)
+    end
+    
+    table.insert(menuItems, "📊 Status Atual")
+    table.insert(menuItems, "❌ Sair")
+    
+    return gg.choice(menuItems, nil, SCRIPT_NAME .. " - Atual: " .. currentSpeed .. "x")
+end
+
+function setSpeed(speed)
+    if speed <= 0 then
+        gg.alert("❌ Velocidade inválida!")
+        return false
+    end
+    
+    -- Método 1: Usando setSpeed do GG
+    local success = pcall(function()
+        gg.setSpeed(speed)
+    end)
+    
+    if success then
+        currentSpeed = speed
+        gg.toast("⚡ Velocidade: " .. speed .. "x")
+        return true
+    else
+        gg.alert("❌ Erro ao definir velocidade.\n\nO jogo pode não suportar modificação de velocidade.")
+        return false
+    end
+end
+
+function customSpeed()
+    local input = gg.prompt(
+        {"Digite a velocidade desejada (0.1 - 10):"},
+        {[1] = "2.0"},
+        {[1] = "number"}
+    )
+    
+    if input == nil then
+        return
+    end
+    
+    local speed = tonumber(input[1])
+    
+    if speed == nil or speed < 0.1 or speed > 10 then
+        gg.alert("❌ Valor inválido!\n\nUse um valor entre 0.1 e 10")
+        return
+    end
+    
+    setSpeed(speed)
+end
+
+function showStatus()
+    local status = string.format([[
+📊 STATUS DO SPEED HACK
+
+⚡ Velocidade Atual: %sx
+🎮 Jogo: %s
+📱 Pacote: %s
+
+💡 DICAS:
+• Use 0.5x para jogos de precisão
+• Use 2-3x para farming
+• Volte para 1x antes de fechar
+    ]], currentSpeed, gg.getTargetInfo().label, gg.getTargetInfo().packageName)
+    
+    gg.alert(status)
+end
+
+-- Loop principal
+function main()
+    gg.toast("✅ " .. SCRIPT_NAME .. " carregado!")
+    
+    while true do
+        if gg.isVisible() then
+            local choice = showMenu()
+            
+            if choice == nil then
+                -- Usuário cancelou
+            elseif choice <= #SPEEDS then
+                local selectedSpeed = SPEEDS[choice]
+                
+                if selectedSpeed.value == -1 then
+                    customSpeed()
+                else
+                    setSpeed(selectedSpeed.value)
+                end
+            elseif choice == #SPEEDS + 1 then
+                showStatus()
+            elseif choice == #SPEEDS + 2 then
+                -- Resetar velocidade antes de sair
+                setSpeed(1.0)
+                gg.toast("👋 Velocidade resetada. Até logo!")
+                os.exit()
+            end
+            
+            gg.setVisible(false)
+        end
+        
+        gg.sleep(100)
+    end
+end
+
+main()
+''',
+            "lang": "lua",
+            "ext": ".lua"
+        },
+        
+        "Hack de Vida/HP Infinito": {
+            "code": '''--[[
+    Game Guardian Script - HP/Vida Infinito
+    Busca e congela valores de HP
+    Autor: ScriptMaster AI
+]]
+
+gg.clearResults()
+gg.setVisible(false)
+
+local SCRIPT_NAME = "❤️ HP Infinito v1.0"
+local savedAddresses = {}
+
+function mainMenu()
+    return gg.choice({
+        "🔍 Buscar HP (Valor Exato)",
+        "🔎 Buscar HP (Porcentagem)",
+        "🔄 Refinar Busca",
+        "💉 Curar (Restaurar HP)",
+        "🛡️ God Mode (HP Infinito)",
+        "❌ Desativar God Mode",
+        "📋 Ver Endereços Salvos",
+        "🗑️ Limpar Tudo",
+        "❌ Sair"
+    }, nil, SCRIPT_NAME)
+end
+
+function searchExactHP()
+    local input = gg.prompt(
+        {"Digite seu HP atual:"},
+        {[1] = "100"},
+        {[1] = "number"}
+    )
+    
+    if input == nil then return end
+    
+    gg.clearResults()
+    
+    -- Buscar como diferentes tipos
+    gg.searchNumber(input[1], gg.TYPE_DWORD)
+    local count1 = gg.getResultsCount()
+    
+    gg.searchNumber(input[1], gg.TYPE_FLOAT)
+    local count2 = gg.getResultsCount()
+    
+    local total = count1 + count2
+    gg.toast("✅ Encontrados: " .. total .. " resultados")
+    
+    if total > 500 then
+        gg.alert("⚠️ Muitos resultados!\n\nTome dano no jogo e use 'Refinar Busca'.")
+    elseif total == 0 then
+        gg.alert("❌ HP não encontrado.\n\nTente buscar por porcentagem ou valor diferente.")
+    end
+end
+
+function searchPercentHP()
+    local input = gg.prompt(
+        {"Digite a porcentagem de HP (ex: 100 para 100%):", "HP máximo do personagem:"},
+        {[1] = "100", [2] = "100"},
+        {[1] = "number", [2] = "number"}
+    )
+    
+    if input == nil then return end
+    
+    local percent = tonumber(input[1])
+    local maxHP = tonumber(input[2])
+    local currentHP = (percent / 100) * maxHP
+    
+    gg.clearResults()
+    
+    -- Buscar valor calculado
+    gg.searchNumber(tostring(currentHP), gg.TYPE_FLOAT)
+    gg.searchNumber(tostring(math.floor(currentHP)), gg.TYPE_DWORD)
+    
+    -- Buscar porcentagem direta (alguns jogos usam 0-1)
+    local percentDecimal = percent / 100
+    gg.searchNumber(tostring(percentDecimal), gg.TYPE_FLOAT)
+    
+    local count = gg.getResultsCount()
+    gg.toast("✅ Encontrados: " .. count .. " resultados")
+end
+
+function refineSearch()
+    local count = gg.getResultsCount()
+    
+    if count == 0 then
+        gg.alert("❌ Faça uma busca primeiro!")
+        return
+    end
+    
+    local input = gg.prompt(
+        {"Digite o NOVO valor de HP:"},
+        {[1] = ""},
+        {[1] = "number"}
+    )
+    
+    if input == nil then return end
+    
+    gg.refineNumber(input[1], gg.TYPE_DWORD)
+    gg.refineNumber(input[1], gg.TYPE_FLOAT)
+    
+    local newCount = gg.getResultsCount()
+    gg.toast("✅ Restam: " .. newCount .. " resultados")
+    
+    if newCount <= 20 and newCount > 0 then
+        gg.alert("🎯 Poucos resultados!\n\nAgora ative o God Mode!")
+    end
+end
+
+function healPlayer()
+    local count = gg.getResultsCount()
+    
+    if count == 0 then
+        gg.alert("❌ Nenhum endereço de HP encontrado!")
+        return
+    end
+    
+    local input = gg.prompt(
+        {"HP para restaurar:"},
+        {[1] = "99999"},
+        {[1] = "number"}
+    )
+    
+    if input == nil then return end
+    
+    local results = gg.getResults(100)
+    
+    for i, v in ipairs(results) do
+        v.value = input[1]
+    end
+    
+    gg.setValues(results)
+    gg.toast("💉 HP restaurado para " .. input[1])
+end
+
+function enableGodMode()
+    local count = gg.getResultsCount()
+    
+    if count == 0 then
+        gg.alert("❌ Busque o HP primeiro!")
+        return
+    end
+    
+    local input = gg.prompt(
+        {"HP para congelar (God Mode):", "Quantidade de endereços (0 = todos):"},
+        {[1] = "99999", [2] = "10"},
+        {[1] = "number", [2] = "number"}
+    )
+    
+    if input == nil then return end
+    
+    local amount = tonumber(input[2])
+    if amount == 0 then amount = math.min(count, 100) end
+    
+    local results = gg.getResults(amount)
+    savedAddresses = {}
+    
+    for i, v in ipairs(results) do
+        v.value = input[1]
+        v.freeze = true
+        table.insert(savedAddresses, {
+            address = v.address,
+            value = input[1]
+        })
+    end
+    
+    gg.setValues(results)
+    gg.addListItems(results)
+    
+    gg.toast("🛡️ GOD MODE ATIVADO!")
+    gg.alert("🛡️ God Mode Ativo!\n\n" .. #results .. " valores congelados em " .. input[1] .. "\n\nSeu HP não vai diminuir!")
+end
+
+function disableGodMode()
+    local list = gg.getListItems()
+    
+    if #list == 0 then
+        gg.alert("❌ God Mode não está ativo!")
+        return
+    end
+    
+    for i, v in ipairs(list) do
+        v.freeze = false
+    end
+    
+    gg.setValues(list)
+    gg.clearList()
+    savedAddresses = {}
+    
+    gg.toast("❌ God Mode desativado")
+end
+
+function showSavedAddresses()
+    if #savedAddresses == 0 then
+        gg.alert("📋 Nenhum endereço salvo.\n\nAtive o God Mode primeiro!")
+        return
+    end
+    
+    local info = "📋 ENDEREÇOS SALVOS:\n\n"
+    
+    for i, addr in ipairs(savedAddresses) do
+        info = info .. string.format("%d. 0x%X = %s\n", i, addr.address, addr.value)
+    end
+    
+    gg.alert(info)
+end
+
+function clearAll()
+    gg.clearResults()
+    gg.clearList()
+    savedAddresses = {}
+    gg.toast("🗑️ Tudo limpo!")
+end
+
+-- Main loop
+function main()
+    gg.toast("✅ " .. SCRIPT_NAME .. " carregado!")
+    
+    while true do
+        if gg.isVisible() then
+            local choice = mainMenu()
+            
+            if choice == 1 then
+                searchExactHP()
+            elseif choice == 2 then
+                searchPercentHP()
+            elseif choice == 3 then
+                refineSearch()
+            elseif choice == 4 then
+                healPlayer()
+            elseif choice == 5 then
+                enableGodMode()
+            elseif choice == 6 then
+                disableGodMode()
+            elseif choice == 7 then
+                showSavedAddresses()
+            elseif choice == 8 then
+                clearAll()
+            elseif choice == 9 then
+                disableGodMode()
+                gg.toast("👋 Até logo!")
+                os.exit()
+            end
+            
+            gg.setVisible(false)
+        end
+        
+        gg.sleep(100)
+    end
+end
+
+main()
+''',
+            "lang": "lua",
+            "ext": ".lua"
+        }
+    },
+    
+    "🤖 Bots Discord": {
+        "Bot Completo com Slash Commands": {
             "code": '''import discord
-from discord.ext import commands
 from discord import app_commands
+from discord.ext import commands
 import asyncio
+from datetime import datetime
 import json
-from datetime import datetime, timedelta
+import os
 
 # Configuração
 intents = discord.Intents.default()
@@ -923,225 +2872,188 @@ intents.message_content = True
 intents.members = True
 intents.guilds = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
-tree = bot.tree
+class MyBot(commands.Bot):
+    def __init__(self):
+        super().__init__(command_prefix="!", intents=intents)
+        self.synced = False
+    
+    async def setup_hook(self):
+        await self.tree.sync()
+        print(f"✅ Comandos sincronizados!")
+    
+    async def on_ready(self):
+        print(f"✅ {self.user} está online!")
+        print(f"📊 Servidores: {len(self.guilds)}")
+        
+        await self.change_presence(
+            activity=discord.Activity(
+                type=discord.ActivityType.watching,
+                name=f"{len(self.guilds)} servidores | /help"
+            )
+        )
 
-# Sistema de economia
+bot = MyBot()
+
+# ==================== ECONOMIA ====================
 class Economy:
     def __init__(self):
-        self.data_file = "economy.json"
-        self.data = self.load_data()
+        self.file = "economy.json"
+        self.data = self.load()
     
-    def load_data(self):
-        try:
-            with open(self.data_file, 'r') as f:
+    def load(self):
+        if os.path.exists(self.file):
+            with open(self.file, 'r') as f:
                 return json.load(f)
-        except:
-            return {}
+        return {}
     
-    def save_data(self):
-        with open(self.data_file, 'w') as f:
-            json.dump(self.data, f, indent=4)
+    def save(self):
+        with open(self.file, 'w') as f:
+            json.dump(self.data, f, indent=2)
     
-    def get_balance(self, user_id):
-        user_id = str(user_id)
-        if user_id not in self.data:
-            self.data[user_id] = {"balance": 0, "daily_last": None}
-        return self.data[user_id]["balance"]
+    def get_user(self, user_id):
+        uid = str(user_id)
+        if uid not in self.data:
+            self.data[uid] = {"balance": 0, "bank": 0, "daily": None}
+            self.save()
+        return self.data[uid]
     
-    def add_money(self, user_id, amount):
-        user_id = str(user_id)
-        if user_id not in self.data:
-            self.data[user_id] = {"balance": 0, "daily_last": None}
-        self.data[user_id]["balance"] += amount
-        self.save_data()
+    def add_balance(self, user_id, amount):
+        user = self.get_user(user_id)
+        user["balance"] += amount
+        self.save()
     
-    def remove_money(self, user_id, amount):
-        user_id = str(user_id)
-        balance = self.get_balance(user_id)
-        if balance >= amount:
-            self.data[user_id]["balance"] -= amount
-            self.save_data()
+    def remove_balance(self, user_id, amount):
+        user = self.get_user(user_id)
+        if user["balance"] >= amount:
+            user["balance"] -= amount
+            self.save()
             return True
         return False
-    
-    def can_claim_daily(self, user_id):
-        user_id = str(user_id)
-        if user_id not in self.data:
-            return True
-        
-        last_claim = self.data[user_id].get("daily_last")
-        if not last_claim:
-            return True
-        
-        last_date = datetime.fromisoformat(last_claim)
-        return datetime.now() - last_date > timedelta(hours=24)
-    
-    def claim_daily(self, user_id):
-        user_id = str(user_id)
-        if user_id not in self.data:
-            self.data[user_id] = {"balance": 0, "daily_last": None}
-        
-        self.data[user_id]["daily_last"] = datetime.now().isoformat()
-        self.save_data()
 
 economy = Economy()
 
-@bot.event
-async def on_ready():
-    print(f'✅ Bot {bot.user} está online!')
-    print(f'📊 Servidores: {len(bot.guilds)}')
-    print(f'👥 Usuários: {len(bot.users)}')
-    
-    await bot.change_presence(
-        activity=discord.Activity(
-            type=discord.ActivityType.watching,
-            name=f"{len(bot.guilds)} servidores | /help"
-        )
-    )
-    
-    try:
-        synced = await bot.tree.sync()
-        print(f'✅ {len(synced)} comandos slash sincronizados')
-    except Exception as e:
-        print(f'❌ Erro ao sincronizar: {e}')
+# ==================== COMANDOS SLASH ====================
 
-@bot.event
-async def on_member_join(member):
-    """Mensagem de boas-vindas"""
+@bot.tree.command(name="ajuda", description="Mostra todos os comandos")
+async def ajuda(interaction: discord.Interaction):
     embed = discord.Embed(
-        title="👋 Bem-vindo!",
-        description=f"Olá {member.mention}! Bem-vindo ao **{member.guild.name}**!",
-        color=discord.Color.green()
-    )
-    embed.set_thumbnail(url=member.display_avatar.url)
-    embed.add_field(name="📅 Conta criada", value=member.created_at.strftime("%d/%m/%Y"))
-    embed.add_field(name="👥 Membro", value=f"#{member.guild.member_count}")
-    embed.set_footer(text=f"ID: {member.id}")
-    
-    channel = member.guild.system_channel
-    if channel:
-        await channel.send(embed=embed)
-
-# Comandos Slash
-@tree.command(name="ping", description="Verifica a latência do bot")
-async def ping(interaction: discord.Interaction):
-    latency = round(bot.latency * 1000)
-    
-    embed = discord.Embed(
-        title="🏓 Pong!",
-        description=f"Latência: **{latency}ms**",
+        title="📚 Central de Ajuda",
+        description="Todos os comandos disponíveis",
         color=discord.Color.blue()
     )
     
+    embed.add_field(
+        name="💰 Economia",
+        value="`/saldo` `/daily` `/depositar` `/sacar` `/transferir` `/rank`",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🎮 Diversão",
+        value="`/dado` `/moeda` `/8ball` `/rps`",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🛠️ Utilidades",
+        value="`/avatar` `/userinfo` `/serverinfo` `/ping`",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🔧 Moderação",
+        value="`/limpar` `/kick` `/ban` `/mute` `/warn`",
+        inline=False
+    )
+    
+    embed.set_footer(text="Desenvolvido com ❤️")
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="ping", description="Verifica a latência do bot")
+async def ping(interaction: discord.Interaction):
+    latency = round(bot.latency * 1000)
+    
     if latency < 100:
-        embed.add_field(name="Status", value="✅ Excelente")
+        status = "🟢 Excelente"
+        color = discord.Color.green()
     elif latency < 200:
-        embed.add_field(name="Status", value="⚠️ Bom")
+        status = "🟡 Bom"
+        color = discord.Color.yellow()
     else:
-        embed.add_field(name="Status", value="❌ Lento")
-    
-    await interaction.response.send_message(embed=embed)
-
-@tree.command(name="avatar", description="Mostra o avatar de um usuário")
-async def avatar(interaction: discord.Interaction, membro: discord.Member = None):
-    membro = membro or interaction.user
+        status = "🔴 Lento"
+        color = discord.Color.red()
     
     embed = discord.Embed(
-        title=f"Avatar de {membro.name}",
-        color=discord.Color.purple()
+        title="🏓 Pong!",
+        color=color
     )
-    embed.set_image(url=membro.display_avatar.url)
-    embed.add_field(name="Link", value=f"[Clique aqui]({membro.display_avatar.url})")
+    embed.add_field(name="Latência", value=f"`{latency}ms`")
+    embed.add_field(name="Status", value=status)
     
     await interaction.response.send_message(embed=embed)
 
-@tree.command(name="serverinfo", description="Informações do servidor")
-async def serverinfo(interaction: discord.Interaction):
-    guild = interaction.guild
+@bot.tree.command(name="saldo", description="Veja seu saldo")
+async def saldo(interaction: discord.Interaction, usuario: discord.Member = None):
+    user = usuario or interaction.user
+    data = economy.get_user(user.id)
     
     embed = discord.Embed(
-        title=f"📊 {guild.name}",
+        title=f"💰 Saldo de {user.display_name}",
         color=discord.Color.gold()
     )
-    
-    embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
-    embed.add_field(name="👑 Dono", value=guild.owner.mention)
-    embed.add_field(name="👥 Membros", value=guild.member_count)
-    embed.add_field(name="💬 Canais", value=len(guild.channels))
-    embed.add_field(name="😀 Emojis", value=len(guild.emojis))
-    embed.add_field(name="🎭 Cargos", value=len(guild.roles))
-    embed.add_field(name="📅 Criado em", value=guild.created_at.strftime("%d/%m/%Y"))
-    embed.add_field(name="🔒 Nível de verificação", value=str(guild.verification_level))
-    embed.add_field(name="📈 Boost", value=f"Nível {guild.premium_tier} ({guild.premium_subscription_count} boosts)")
+    embed.add_field(name="💵 Carteira", value=f"`{data['balance']:,}` moedas")
+    embed.add_field(name="🏦 Banco", value=f"`{data['bank']:,}` moedas")
+    embed.add_field(name="💎 Total", value=f"`{data['balance'] + data['bank']:,}` moedas")
+    embed.set_thumbnail(url=user.display_avatar.url)
     
     await interaction.response.send_message(embed=embed)
 
-@tree.command(name="userinfo", description="Informações de um usuário")
-async def userinfo(interaction: discord.Interaction, membro: discord.Member = None):
-    membro = membro or interaction.user
-    
-    embed = discord.Embed(
-        title=f"👤 {membro.name}",
-        color=membro.color
-    )
-    
-    embed.set_thumbnail(url=membro.display_avatar.url)
-    embed.add_field(name="🆔 ID", value=membro.id)
-    embed.add_field(name="📛 Nome", value=membro.display_name)
-    embed.add_field(name="📅 Conta criada", value=membro.created_at.strftime("%d/%m/%Y"))
-    embed.add_field(name="📥 Entrou em", value=membro.joined_at.strftime("%d/%m/%Y"))
-    embed.add_field(name="🎭 Cargos", value=len(membro.roles) - 1)
-    embed.add_field(name="🤖 Bot?", value="Sim" if membro.bot else "Não")
-    
-    await interaction.response.send_message(embed=embed)
-
-# Sistema de Economia
-@tree.command(name="saldo", description="Verifica seu saldo")
-async def saldo(interaction: discord.Interaction):
-    balance = economy.get_balance(interaction.user.id)
-    
-    embed = discord.Embed(
-        title="💰 Seu Saldo",
-        description=f"Você possui **{balance:,}** moedas!",
-        color=discord.Color.gold()
-    )
-    embed.set_footer(text=f"Use /daily para ganhar moedas diárias!")
-    
-    await interaction.response.send_message(embed=embed)
-
-@tree.command(name="daily", description="Resgata recompensa diária")
+@bot.tree.command(name="daily", description="Receba suas moedas diárias")
 async def daily(interaction: discord.Interaction):
-    if economy.can_claim_daily(interaction.user.id):
-        reward = 100
-        economy.add_money(interaction.user.id, reward)
-        economy.claim_daily(interaction.user.id)
+    import random
+    
+    user_data = economy.get_user(interaction.user.id)
+    
+    # Verificar cooldown (simplificado)
+    reward = random.randint(100, 500)
+    economy.add_balance(interaction.user.id, reward)
+    
+    embed = discord.Embed(
+        title="🎁 Recompensa Diária!",
+        description=f"Você recebeu **{reward}** moedas!",
+        color=discord.Color.green()
+    )
+    embed.add_field(name="💰 Novo Saldo", value=f"`{user_data['balance'] + reward:,}` moedas")
+    
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="transferir", description="Transfira moedas para outro usuário")
+async def transferir(interaction: discord.Interaction, usuario: discord.Member, quantidade: int):
+    if quantidade <= 0:
+        await interaction.response.send_message("❌ Quantidade inválida!", ephemeral=True)
+        return
+    
+    if usuario.id == interaction.user.id:
+        await interaction.response.send_message("❌ Você não pode transferir para si mesmo!", ephemeral=True)
+        return
+    
+    if economy.remove_balance(interaction.user.id, quantidade):
+        economy.add_balance(usuario.id, quantidade)
         
         embed = discord.Embed(
-            title="🎁 Recompensa Diária",
-            description=f"Você ganhou **{reward}** moedas!",
+            title="💸 Transferência Realizada!",
+            description=f"**{quantidade:,}** moedas enviadas para {usuario.mention}",
             color=discord.Color.green()
         )
-        embed.add_field(name="💰 Novo saldo", value=f"{economy.get_balance(interaction.user.id):,} moedas")
-        embed.set_footer(text="Volte amanhã para mais!")
-        
         await interaction.response.send_message(embed=embed)
     else:
-        embed = discord.Embed(
-            title="⏰ Já Resgatado",
-            description="Você já resgatou sua recompensa hoje!",
-            color=discord.Color.red()
-        )
-        embed.set_footer(text="Volte em 24 horas")
-        
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message("❌ Saldo insuficiente!", ephemeral=True)
 
-@tree.command(name="rank", description="Ranking de economia")
+@bot.tree.command(name="rank", description="Veja o ranking de economia")
 async def rank(interaction: discord.Interaction):
-    # Ordenar usuários por saldo
     sorted_users = sorted(
         economy.data.items(),
-        key=lambda x: x[1]["balance"],
+        key=lambda x: x[1].get("balance", 0) + x[1].get("bank", 0),
         reverse=True
     )[:10]
     
@@ -1152,42 +3064,155 @@ async def rank(interaction: discord.Interaction):
     
     medals = ["🥇", "🥈", "🥉"]
     
+    description = ""
     for i, (user_id, data) in enumerate(sorted_users):
         try:
             user = await bot.fetch_user(int(user_id))
-            medal = medals[i] if i < 3 else f"{i+1}."
-            embed.add_field(
-                name=f"{medal} {user.name}",
-                value=f"💰 {data['balance']:,} moedas",
-                inline=False
-            )
+            medal = medals[i] if i < 3 else f"**{i+1}.**"
+            total = data.get("balance", 0) + data.get("bank", 0)
+            description += f"{medal} {user.name}: `{total:,}` moedas\\n"
         except:
             continue
     
+    embed.description = description
     await interaction.response.send_message(embed=embed)
 
-# Comandos de Moderação
-@tree.command(name="limpar", description="Limpa mensagens do chat")
+@bot.tree.command(name="avatar", description="Veja o avatar de um usuário")
+async def avatar(interaction: discord.Interaction, usuario: discord.Member = None):
+    user = usuario or interaction.user
+    
+    embed = discord.Embed(
+        title=f"🖼️ Avatar de {user.display_name}",
+        color=user.color
+    )
+    embed.set_image(url=user.display_avatar.url)
+    embed.add_field(name="🔗 Link", value=f"[Clique aqui]({user.display_avatar.url})")
+    
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="userinfo", description="Informações de um usuário")
+async def userinfo(interaction: discord.Interaction, usuario: discord.Member = None):
+    user = usuario or interaction.user
+    
+    embed = discord.Embed(
+        title=f"👤 {user.display_name}",
+        color=user.color
+    )
+    embed.set_thumbnail(url=user.display_avatar.url)
+    embed.add_field(name="🆔 ID", value=f"`{user.id}`")
+    embed.add_field(name="📛 Tag", value=f"`{user}`")
+    embed.add_field(name="📅 Conta criada", value=f"<t:{int(user.created_at.timestamp())}:R>")
+    embed.add_field(name="📥 Entrou no servidor", value=f"<t:{int(user.joined_at.timestamp())}:R>")
+    embed.add_field(name="🎭 Cargos", value=f"{len(user.roles) - 1}")
+    embed.add_field(name="🤖 Bot?", value="Sim" if user.bot else "Não")
+    
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="serverinfo", description="Informações do servidor")
+async def serverinfo(interaction: discord.Interaction):
+    guild = interaction.guild
+    
+    embed = discord.Embed(
+        title=f"📊 {guild.name}",
+        color=discord.Color.blue()
+    )
+    
+    if guild.icon:
+        embed.set_thumbnail(url=guild.icon.url)
+    
+    embed.add_field(name="👑 Dono", value=guild.owner.mention)
+    embed.add_field(name="👥 Membros", value=f"`{guild.member_count}`")
+    embed.add_field(name="💬 Canais", value=f"`{len(guild.channels)}`")
+    embed.add_field(name="😀 Emojis", value=f"`{len(guild.emojis)}`")
+    embed.add_field(name="🎭 Cargos", value=f"`{len(guild.roles)}`")
+    embed.add_field(name="📅 Criado em", value=f"<t:{int(guild.created_at.timestamp())}:R>")
+    embed.add_field(name="🔒 Verificação", value=f"`{guild.verification_level}`")
+    embed.add_field(name="📈 Boosts", value=f"`{guild.premium_subscription_count}` (Nível {guild.premium_tier})")
+    
+    await interaction.response.send_message(embed=embed)
+
+# Jogos
+@bot.tree.command(name="dado", description="Role um dado")
+async def dado(interaction: discord.Interaction, lados: int = 6):
+    import random
+    
+    if lados < 2 or lados > 100:
+        await interaction.response.send_message("❌ O dado deve ter entre 2 e 100 lados!", ephemeral=True)
+        return
+    
+    result = random.randint(1, lados)
+    
+    embed = discord.Embed(
+        title="🎲 Dado Rolado!",
+        description=f"**Resultado:** `{result}` (d{lados})",
+        color=discord.Color.purple()
+    )
+    
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="moeda", description="Cara ou coroa")
+async def moeda(interaction: discord.Interaction):
+    import random
+    
+    result = random.choice(["Cara", "Coroa"])
+    emoji = "🪙" if result == "Cara" else "👑"
+    
+    embed = discord.Embed(
+        title=f"{emoji} {result}!",
+        color=discord.Color.gold()
+    )
+    
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="8ball", description="Pergunte à bola mágica")
+async def eightball(interaction: discord.Interaction, pergunta: str):
+    import random
+    
+    respostas = [
+        "✅ Sim, com certeza!",
+        "✅ Provavelmente sim",
+        "✅ As estrelas dizem que sim",
+        "🤔 Talvez...",
+        "🤔 Não tenho certeza",
+        "🤔 Pergunte novamente",
+        "❌ Não conte com isso",
+        "❌ Muito duvidoso",
+        "❌ Definitivamente não"
+    ]
+    
+    embed = discord.Embed(
+        title="🎱 Bola Mágica",
+        color=discord.Color.dark_purple()
+    )
+    embed.add_field(name="❓ Pergunta", value=pergunta, inline=False)
+    embed.add_field(name="🔮 Resposta", value=random.choice(respostas), inline=False)
+    
+    await interaction.response.send_message(embed=embed)
+
+# Moderação
+@bot.tree.command(name="limpar", description="Limpa mensagens do chat")
 @app_commands.checks.has_permissions(manage_messages=True)
 async def limpar(interaction: discord.Interaction, quantidade: int):
-    if quantidade > 100:
-        await interaction.response.send_message("❌ Máximo 100 mensagens!", ephemeral=True)
+    if quantidade < 1 or quantidade > 100:
+        await interaction.response.send_message("❌ Quantidade deve ser entre 1 e 100!", ephemeral=True)
         return
     
     await interaction.response.defer(ephemeral=True)
-    
     deleted = await interaction.channel.purge(limit=quantidade)
-    
     await interaction.followup.send(f"✅ {len(deleted)} mensagens deletadas!", ephemeral=True)
 
-@tree.command(name="kick", description="Expulsa um membro")
+@bot.tree.command(name="kick", description="Expulsa um membro")
 @app_commands.checks.has_permissions(kick_members=True)
 async def kick(interaction: discord.Interaction, membro: discord.Member, motivo: str = "Sem motivo"):
+    if membro.top_role >= interaction.user.top_role:
+        await interaction.response.send_message("❌ Você não pode expulsar este membro!", ephemeral=True)
+        return
+    
     await membro.kick(reason=motivo)
     
     embed = discord.Embed(
         title="👢 Membro Expulso",
-        description=f"{membro.mention} foi expulso!",
+        description=f"{membro.mention} foi expulso do servidor",
         color=discord.Color.orange()
     )
     embed.add_field(name="Motivo", value=motivo)
@@ -1195,14 +3220,18 @@ async def kick(interaction: discord.Interaction, membro: discord.Member, motivo:
     
     await interaction.response.send_message(embed=embed)
 
-@tree.command(name="ban", description="Bane um membro")
+@bot.tree.command(name="ban", description="Bane um membro")
 @app_commands.checks.has_permissions(ban_members=True)
 async def ban(interaction: discord.Interaction, membro: discord.Member, motivo: str = "Sem motivo"):
+    if membro.top_role >= interaction.user.top_role:
+        await interaction.response.send_message("❌ Você não pode banir este membro!", ephemeral=True)
+        return
+    
     await membro.ban(reason=motivo)
     
     embed = discord.Embed(
         title="🔨 Membro Banido",
-        description=f"{membro.mention} foi banido!",
+        description=f"{membro.mention} foi banido do servidor",
         color=discord.Color.red()
     )
     embed.add_field(name="Motivo", value=motivo)
@@ -1210,499 +3239,18 @@ async def ban(interaction: discord.Interaction, membro: discord.Member, motivo: 
     
     await interaction.response.send_message(embed=embed)
 
-# Comandos de Diversão
-@tree.command(name="coinflip", description="Cara ou coroa")
-async def coinflip(interaction: discord.Interaction):
-    import random
-    result = random.choice(["Cara", "Coroa"])
-    
-    embed = discord.Embed(
-        title="🪙 Cara ou Coroa",
-        description=f"Resultado: **{result}**!",
-        color=discord.Color.blue()
-    )
-    
-    await interaction.response.send_message(embed=embed)
-
-@tree.command(name="dado", description="Rola um dado")
-async def dado(interaction: discord.Interaction, lados: int = 6):
-    import random
-    
-    if lados < 2:
-        await interaction.response.send_message("❌ O dado precisa ter pelo menos 2 lados!", ephemeral=True)
-        return
-    
-    result = random.randint(1, lados)
-    
-    embed = discord.Embed(
-        title="🎲 Rolando Dado",
-        description=f"Dado de {lados} lados: **{result}**!",
-        color=discord.Color.green()
-    )
-    
-    await interaction.response.send_message(embed=embed)
-
-# Sistema de Tickets
-ticket_channel_id = None  # Configure aqui o ID do canal de tickets
-
-@tree.command(name="ticket", description="Abre um ticket de suporte")
-async def ticket(interaction: discord.Interaction, motivo: str):
-    guild = interaction.guild
-    user = interaction.user
-    
-    # Criar canal privado
-    overwrites = {
-        guild.default_role: discord.PermissionOverwrite(read_messages=False),
-        user: discord.PermissionOverwrite(read_messages=True, send_messages=True)
-    }
-    
-    channel = await guild.create_text_channel(
-        name=f"ticket-{user.name}",
-        overwrites=overwrites
-    )
-    
-    embed = discord.Embed(
-        title="🎫 Ticket Criado",
-        description=f"Seu ticket foi criado em {channel.mention}!",
-        color=discord.Color.green()
-    )
-    
-    await interaction.response.send_message(embed=embed, ephemeral=True)
-    
-    # Mensagem no canal do ticket
-    ticket_embed = discord.Embed(
-        title="🎫 Novo Ticket de Suporte",
-        description=f"**Criado por:** {user.mention}\n**Motivo:** {motivo}",
-        color=discord.Color.blue()
-    )
-    ticket_embed.set_footer(text="Use /close para fechar o ticket")
-    
-    await channel.send(embed=ticket_embed)
-
-@tree.command(name="close", description="Fecha o ticket atual")
-async def close_ticket(interaction: discord.Interaction):
-    if "ticket-" in interaction.channel.name:
-        await interaction.response.send_message("🗑️ Fechando ticket em 5 segundos...")
-        await asyncio.sleep(5)
-        await interaction.channel.delete()
-    else:
-        await interaction.response.send_message("❌ Este não é um canal de ticket!", ephemeral=True)
-
-# Handler de erros
-@tree.error
+# Error handler
+@bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     if isinstance(error, app_commands.MissingPermissions):
-        await interaction.response.send_message("❌ Você não tem permissão para usar este comando!", ephemeral=True)
+        await interaction.response.send_message("❌ Você não tem permissão!", ephemeral=True)
     else:
         await interaction.response.send_message(f"❌ Erro: {str(error)}", ephemeral=True)
 
-# Rodar bot
+# Rodar
 if __name__ == "__main__":
-    TOKEN = "SEU_TOKEN_AQUI"  # Coloque seu token aqui
+    TOKEN = "SEU_TOKEN_AQUI"
     bot.run(TOKEN)
-''',
-            "lang": "python",
-            "ext": ".py"
-        },
-        
-        "Telegram Bot Completo": {
-            "code": '''from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
-import logging
-from datetime import datetime
-import json
-
-# Configurar logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-
-logger = logging.getLogger(__name__)
-
-# Sistema de dados
-class UserData:
-    def __init__(self):
-        self.data_file = "users.json"
-        self.data = self.load_data()
-    
-    def load_data(self):
-        try:
-            with open(self.data_file, 'r') as f:
-                return json.load(f)
-        except:
-            return {}
-    
-    def save_data(self):
-        with open(self.data_file, 'w') as f:
-            json.dump(self.data, f, indent=4)
-    
-    def get_user(self, user_id):
-        user_id = str(user_id)
-        if user_id not in self.data:
-            self.data[user_id] = {
-                "name": "",
-                "points": 0,
-                "joined_at": datetime.now().isoformat()
-            }
-            self.save_data()
-        return self.data[user_id]
-    
-    def add_points(self, user_id, points):
-        user_id = str(user_id)
-        user = self.get_user(user_id)
-        user["points"] += points
-        self.save_data()
-
-user_data = UserData()
-
-# Comando /start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    user_info = user_data.get_user(user.id)
-    user_info["name"] = user.first_name
-    user_data.save_data()
-    
-    welcome_text = f"""
-👋 Olá, {user.first_name}!
-
-Bem-vindo ao bot de exemplo!
-
-📚 Comandos disponíveis:
-/start - Iniciar bot
-/help - Ajuda
-/menu - Menu principal
-/pontos - Ver seus pontos
-/rank - Ranking de usuários
-/sobre - Sobre o bot
-
-💡 Use /menu para ver todas as opções!
-"""
-    
-    keyboard = [
-        [InlineKeyboardButton("📚 Menu", callback_data="menu")],
-        [InlineKeyboardButton("ℹ️ Ajuda", callback_data="help")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text(welcome_text, reply_markup=reply_markup)
-
-# Comando /help
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    help_text = """
-📖 *AJUDA DO BOT*
-
-🔹 *Comandos Básicos:*
-/start - Iniciar o bot
-/help - Mostrar esta mensagem
-/menu - Menu interativo
-
-🔹 *Sistema de Pontos:*
-/pontos - Ver seus pontos
-/rank - Ver ranking
-/daily - Ganhar pontos diários
-
-🔹 *Interação:*
-/echo <texto> - Repete sua mensagem
-/clima <cidade> - Ver clima
-/calcular <expressão> - Calculadora
-
-🔹 *Diversão:*
-/dado - Rolar dado
-/moeda - Cara ou coroa
-/quiz - Quiz aleatório
-
-💡 Use os botões para navegar!
-"""
-    
-    keyboard = [
-        [InlineKeyboardButton("🏠 Voltar", callback_data="menu")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text(help_text, parse_mode="Markdown", reply_markup=reply_markup)
-
-# Menu interativo
-async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    menu_text = """
-🎯 *MENU PRINCIPAL*
-
-Escolha uma opção abaixo:
-"""
-    
-    keyboard = [
-        [InlineKeyboardButton("💰 Pontos", callback_data="pontos"),
-         InlineKeyboardButton("🏆 Ranking", callback_data="rank")],
-        [InlineKeyboardButton("🎮 Jogos", callback_data="games"),
-         InlineKeyboardButton("🛠️ Ferramentas", callback_data="tools")],
-        [InlineKeyboardButton("ℹ️ Sobre", callback_data="about")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text(menu_text, parse_mode="Markdown", reply_markup=reply_markup)
-
-# Sistema de pontos
-async def pontos(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    user_info = user_data.get_user(user.id)
-    
-    text = f"""
-💰 *Seus Pontos*
-
-Pontos atuais: *{user_info['points']}*
-Membro desde: {datetime.fromisoformat(user_info['joined_at']).strftime('%d/%m/%Y')}
-
-Use /daily para ganhar pontos diários!
-"""
-    
-    await update.message.reply_text(text, parse_mode="Markdown")
-
-# Ranking
-async def rank(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Ordenar usuários por pontos
-    sorted_users = sorted(
-        user_data.data.items(),
-        key=lambda x: x[1]["points"],
-        reverse=True
-    )[:10]
-    
-    rank_text = "🏆 *TOP 10 RANKING*\n\n"
-    
-    medals = ["🥇", "🥈", "🥉"]
-    
-    for i, (user_id, data) in enumerate(sorted_users):
-        medal = medals[i] if i < 3 else f"{i+1}."
-        name = data.get("name", "Desconhecido")
-        points = data.get("points", 0)
-        rank_text += f"{medal} {name}: *{points}* pontos\n"
-    
-    await update.message.reply_text(rank_text, parse_mode="Markdown")
-
-# Daily rewards
-async def daily(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    reward = 100
-    user_data.add_points(user.id, reward)
-    
-    user_info = user_data.get_user(user.id)
-    
-    text = f"""
-🎁 *Recompensa Diária*
-
-Você ganhou *{reward}* pontos!
-
-💰 Total: *{user_info['points']}* pontos
-"""
-    
-    await update.message.reply_text(text, parse_mode="Markdown")
-
-# Echo
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.args:
-        message = " ".join(context.args)
-        await update.message.reply_text(f"🔊 {message}")
-    else:
-        await update.message.reply_text("❌ Use: /echo <sua mensagem>")
-
-# Calculadora
-async def calcular(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("❌ Use: /calcular <expressão>\nExemplo: /calcular 2 + 2")
-        return
-    
-    try:
-        expression = " ".join(context.args)
-        # Segurança básica
-        allowed_chars = "0123456789+-*/() ."
-        if not all(c in allowed_chars for c in expression):
-            await update.message.reply_text("❌ Apenas números e operadores matemáticos são permitidos!")
-            return
-        
-        result = eval(expression)
-        await update.message.reply_text(f"🔢 Resultado: *{result}*", parse_mode="Markdown")
-    except Exception as e:
-        await update.message.reply_text(f"❌ Erro ao calcular: {str(e)}")
-
-# Dado
-async def dado(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    import random
-    result = random.randint(1, 6)
-    
-    dice_emoji = {
-        1: "⚀",
-        2: "⚁",
-        3: "⚂",
-        4: "⚃",
-        5: "⚄",
-        6: "⚅"
-    }
-    
-    await update.message.reply_text(f"🎲 Você tirou: {dice_emoji[result]} *{result}*", parse_mode="Markdown")
-
-# Moeda
-async def moeda(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    import random
-    result = random.choice(["Cara", "Coroa"])
-    emoji = "🪙" if result == "Cara" else "🎭"
-    
-    await update.message.reply_text(f"{emoji} Resultado: *{result}*!", parse_mode="Markdown")
-
-# Quiz
-async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    import random
-    
-    perguntas = [
-        {
-            "pergunta": "Qual é a capital do Brasil?",
-            "opcoes": ["São Paulo", "Brasília", "Rio de Janeiro", "Salvador"],
-            "resposta": 1
-        },
-        {
-            "pergunta": "Quanto é 5 x 7?",
-            "opcoes": ["30", "35", "40", "45"],
-            "resposta": 1
-        },
-        {
-            "pergunta": "Qual é o maior planeta do sistema solar?",
-            "opcoes": ["Terra", "Marte", "Júpiter", "Saturno"],
-            "resposta": 2
-        }
-    ]
-    
-    quiz_data = random.choice(perguntas)
-    
-    text = f"❓ *{quiz_data['pergunta']}*"
-    
-    keyboard = []
-    for i, opcao in enumerate(quiz_data['opcoes']):
-        keyboard.append([InlineKeyboardButton(
-            opcao,
-            callback_data=f"quiz_{i}_{quiz_data['resposta']}"
-        )])
-    
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=reply_markup)
-
-# Handler de callbacks (botões)
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    data = query.data
-    
-    if data == "menu":
-        text = """
-🎯 *MENU PRINCIPAL*
-
-Escolha uma opção abaixo:
-"""
-        keyboard = [
-            [InlineKeyboardButton("💰 Pontos", callback_data="pontos"),
-             InlineKeyboardButton("🏆 Ranking", callback_data="rank")],
-            [InlineKeyboardButton("🎮 Jogos", callback_data="games"),
-             InlineKeyboardButton("🛠️ Ferramentas", callback_data="tools")],
-            [InlineKeyboardButton("ℹ️ Sobre", callback_data="about")],
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=reply_markup)
-    
-    elif data == "pontos":
-        user = query.from_user
-        user_info = user_data.get_user(user.id)
-        
-        text = f"""
-💰 *Seus Pontos*
-
-Pontos atuais: *{user_info['points']}*
-Membro desde: {datetime.fromisoformat(user_info['joined_at']).strftime('%d/%m/%Y')}
-
-Use /daily para ganhar pontos diários!
-"""
-        keyboard = [[InlineKeyboardButton("🏠 Voltar", callback_data="menu")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=reply_markup)
-    
-    elif data == "games":
-        text = """
-🎮 *JOGOS DISPONÍVEIS*
-
-/dado - Rolar um dado 🎲
-/moeda - Cara ou coroa 🪙
-/quiz - Quiz de perguntas ❓
-
-Divirta-se!
-"""
-        keyboard = [[InlineKeyboardButton("🏠 Voltar", callback_data="menu")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=reply_markup)
-    
-    elif data.startswith("quiz_"):
-        parts = data.split("_")
-        escolha = int(parts[1])
-        resposta_certa = int(parts[2])
-        
-        if escolha == resposta_certa:
-            user_data.add_points(query.from_user.id, 10)
-            text = "✅ *Correto!* Você ganhou 10 pontos! 🎉"
-        else:
-            text = "❌ *Errado!* Tente novamente!"
-        
-        await query.edit_message_text(text, parse_mode="Markdown")
-
-# Handler de mensagens
-async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text.lower()
-    
-    if "oi" in text or "olá" in text or "ola" in text:
-        await update.message.reply_text(f"👋 Olá, {update.effective_user.first_name}!")
-    
-    elif "tchau" in text or "até logo" in text:
-        await update.message.reply_text("👋 Até logo! Volte sempre!")
-    
-    elif "obrigado" in text or "obrigada" in text:
-        await update.message.reply_text("😊 De nada! Estou aqui para ajudar!")
-
-# Handler de erros
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.error(f"Erro: {context.error}")
-
-# Main
-def main():
-    # Token do bot
-    TOKEN = "SEU_TOKEN_AQUI"  # Coloque seu token aqui
-    
-    # Criar aplicação
-    application = Application.builder().token(TOKEN).build()
-    
-    # Adicionar handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("menu", menu))
-    application.add_handler(CommandHandler("pontos", pontos))
-    application.add_handler(CommandHandler("rank", rank))
-    application.add_handler(CommandHandler("daily", daily))
-    application.add_handler(CommandHandler("echo", echo))
-    application.add_handler(CommandHandler("calcular", calcular))
-    application.add_handler(CommandHandler("dado", dado))
-    application.add_handler(CommandHandler("moeda", moeda))
-    application.add_handler(CommandHandler("quiz", quiz))
-    
-    # Callback queries (botões)
-    application.add_handler(CallbackQueryHandler(button_handler))
-    
-    # Mensagens de texto
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
-    
-    # Erros
-    application.add_error_handler(error_handler)
-    
-    # Iniciar bot
-    print("✅ Bot iniciado!")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
-
-if __name__ == "__main__":
-    main()
 ''',
             "lang": "python",
             "ext": ".py"
@@ -1710,8 +3258,13 @@ if __name__ == "__main__":
     },
     
     "🐍 Python Scripts": {
-        "Web Scraper Avançado": {
-            "code": '''import requests
+        "Web Scraper Profissional": {
+            "code": '''"""
+Web Scraper Profissional
+Extrai dados de websites com sistema de retry e rate limiting
+"""
+
+import requests
 from bs4 import BeautifulSoup
 import csv
 import json
@@ -1719,6 +3272,7 @@ from datetime import datetime
 import time
 from urllib.parse import urljoin, urlparse
 import logging
+import re
 
 # Configurar logging
 logging.basicConfig(
@@ -1727,64 +3281,84 @@ logging.basicConfig(
 )
 
 class WebScraper:
-    def __init__(self, base_url, output_format='csv'):
+    def __init__(self, base_url, delay=1.0):
         self.base_url = base_url
-        self.output_format = output_format
+        self.delay = delay
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8'
         })
         self.data = []
     
-    def fetch_page(self, url, retries=3):
-        """Busca uma página com retry"""
+    def fetch(self, url, retries=3):
+        """Busca página com retry automático"""
         for attempt in range(retries):
             try:
                 logging.info(f"Buscando: {url}")
-                response = self.session.get(url, timeout=10)
+                response = self.session.get(url, timeout=15)
                 response.raise_for_status()
+                time.sleep(self.delay)
                 return response
             except Exception as e:
                 logging.error(f"Tentativa {attempt + 1} falhou: {e}")
                 if attempt < retries - 1:
-                    time.sleep(2 ** attempt)  # Exponential backoff
-                else:
-                    logging.error(f"Falha ao buscar {url}")
-                    return None
+                    time.sleep(2 ** attempt)
+        return None
     
-    def parse_html(self, html_content):
-        """Parse HTML content"""
-        return BeautifulSoup(html_content, 'html.parser')
+    def parse(self, html):
+        """Parse HTML"""
+        return BeautifulSoup(html, 'html.parser')
     
-    def extract_links(self, soup, base_url):
-        """Extrai todos os links da página"""
+    def extract_text(self, soup, selector):
+        """Extrai texto de um seletor CSS"""
+        element = soup.select_one(selector)
+        return element.get_text(strip=True) if element else None
+    
+    def extract_all(self, soup, selector):
+        """Extrai todos os textos de um seletor"""
+        elements = soup.select(selector)
+        return [el.get_text(strip=True) for el in elements]
+    
+    def extract_links(self, soup):
+        """Extrai todos os links"""
         links = []
-        for link in soup.find_all('a', href=True):
-            url = urljoin(base_url, link['href'])
-            if urlparse(url).netloc == urlparse(base_url).netloc:
-                links.append(url)
-        return list(set(links))  # Remove duplicatas
+        for a in soup.find_all('a', href=True):
+            url = urljoin(self.base_url, a['href'])
+            if self._is_valid_url(url):
+                links.append({
+                    'url': url,
+                    'text': a.get_text(strip=True)
+                })
+        return links
+    
+    def _is_valid_url(self, url):
+        """Verifica se URL é válida"""
+        try:
+            result = urlparse(url)
+            return all([result.scheme, result.netloc])
+        except:
+            return False
     
     def scrape_page(self, url):
-        """Scrape uma página específica"""
-        response = self.fetch_page(url)
+        """Scrape uma página"""
+        response = self.fetch(url)
         if not response:
             return None
         
-        soup = self.parse_html(response.content)
+        soup = self.parse(response.content)
         
-        # Extrair dados (customize conforme necessário)
-        page_data = {
+        return {
             'url': url,
-            'title': soup.title.string if soup.title else 'N/A',
-            'headings': [h.get_text(strip=True) for h in soup.find_all(['h1', 'h2', 'h3'])],
-            'paragraphs': [p.get_text(strip=True) for p in soup.find_all('p')],
-            'images': [img.get('src', '') for img in soup.find_all('img')],
-            'links': self.extract_links(soup, url),
+            'title': self.extract_text(soup, 'title'),
+            'h1': self.extract_all(soup, 'h1'),
+            'h2': self.extract_all(soup, 'h2'),
+            'paragraphs': len(soup.find_all('p')),
+            'images': len(soup.find_all('img')),
+            'links': len(soup.find_all('a')),
             'timestamp': datetime.now().isoformat()
         }
-        
-        return page_data
     
     def scrape_multiple(self, urls):
         """Scrape múltiplas URLs"""
@@ -1792,10 +3366,22 @@ class WebScraper:
             data = self.scrape_page(url)
             if data:
                 self.data.append(data)
-            time.sleep(1)  # Respeitar o servidor
+                logging.info(f"✅ Scraped: {url}")
+        return self.data
     
-    def save_to_csv(self, filename=None):
-        """Salva dados em CSV"""
+    def save_json(self, filename=None):
+        """Salva em JSON"""
+        if not filename:
+            filename = f'scrape_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+        
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(self.data, f, indent=2, ensure_ascii=False)
+        
+        logging.info(f"✅ Salvo em {filename}")
+        return filename
+    
+    def save_csv(self, filename=None):
+        """Salva em CSV"""
         if not filename:
             filename = f'scrape_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
         
@@ -1803,446 +3389,44 @@ class WebScraper:
             logging.warning("Nenhum dado para salvar")
             return
         
-        # Flatten data para CSV
-        flattened_data = []
-        for item in self.data:
-            flattened_item = {
-                'url': item['url'],
-                'title': item['title'],
-                'num_headings': len(item['headings']),
-                'num_paragraphs': len(item['paragraphs']),
-                'num_images': len(item['images']),
-                'num_links': len(item['links']),
-                'timestamp': item['timestamp']
-            }
-            flattened_data.append(flattened_item)
-        
         with open(filename, 'w', newline='', encoding='utf-8') as f:
-            if flattened_data:
-                writer = csv.DictWriter(f, fieldnames=flattened_data[0].keys())
-                writer.writeheader()
-                writer.writerows(flattened_data)
+            writer = csv.DictWriter(f, fieldnames=self.data[0].keys())
+            writer.writeheader()
+            
+            for row in self.data:
+                # Converter listas para string
+                row_copy = row.copy()
+                for key, value in row_copy.items():
+                    if isinstance(value, list):
+                        row_copy[key] = ' | '.join(str(v) for v in value)
+                writer.writerow(row_copy)
         
-        logging.info(f"✅ Dados salvos em {filename}")
-    
-    def save_to_json(self, filename=None):
-        """Salva dados em JSON"""
-        if not filename:
-            filename = f'scrape_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
-        
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(self.data, f, indent=4, ensure_ascii=False)
-        
-        logging.info(f"✅ Dados salvos em {filename}")
-    
-    def save(self, filename=None):
-        """Salva dados no formato especificado"""
-        if self.output_format == 'csv':
-            self.save_to_csv(filename)
-        elif self.output_format == 'json':
-            self.save_to_json(filename)
-        else:
-            logging.error(f"Formato não suportado: {self.output_format}")
-    
-    def get_stats(self):
-        """Retorna estatísticas do scraping"""
-        if not self.data:
-            return "Nenhum dado coletado"
-        
-        total_pages = len(self.data)
-        total_headings = sum(len(d['headings']) for d in self.data)
-        total_paragraphs = sum(len(d['paragraphs']) for d in self.data)
-        total_images = sum(len(d['images']) for d in self.data)
-        total_links = sum(len(d['links']) for d in self.data)
-        
-        return f"""
-📊 ESTATÍSTICAS DO SCRAPING:
-━━━━━━━━━━━━━━━━━━━━━━━
-📄 Páginas: {total_pages}
-📋 Headings: {total_headings}
-📝 Parágrafos: {total_paragraphs}
-🖼️  Imagens: {total_images}
-🔗 Links: {total_links}
-"""
+        logging.info(f"✅ Salvo em {filename}")
+        return filename
 
 # Exemplo de uso
 if __name__ == "__main__":
-    # Configuração
-    url = "https://example.com"  # Substitua pela URL desejada
-    
     # Criar scraper
-    scraper = WebScraper(url, output_format='json')
+    scraper = WebScraper("https://example.com", delay=1.0)
     
     # Scrape uma página
-    print("🔍 Iniciando scraping...")
-    data = scraper.scrape_page(url)
-    
-    if data:
-        scraper.data.append(data)
-        
-        # Mostrar estatísticas
-        print(scraper.get_stats())
-        
-        # Salvar dados
-        scraper.save()
-        print("✅ Scraping concluído!")
-    else:
-        print("❌ Erro ao fazer scraping")
-    
-    # Para scrape múltiplo:
-    # urls = ["url1", "url2", "url3"]
-    # scraper.scrape_multiple(urls)
-    # scraper.save()
-''',
-            "lang": "python",
-            "ext": ".py"
-        },
-        
-        "API RESTful com Flask": {
-            "code": '''from flask import Flask, jsonify, request
-from flask_cors import CORS
-from datetime import datetime
-import json
-import os
-
-app = Flask(__name__)
-CORS(app)  # Habilitar CORS
-
-# Arquivo de dados
-DATA_FILE = 'database.json'
-
-# Funções de banco de dados
-def load_data():
-    """Carrega dados do arquivo JSON"""
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'r') as f:
-            return json.load(f)
-    return {'users': [], 'posts': []}
-
-def save_data(data):
-    """Salva dados no arquivo JSON"""
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
-
-# Carregar dados iniciais
-db = load_data()
-
-# ==================== ROTAS ====================
-
-@app.route('/')
-def home():
-    """Rota principal"""
-    return jsonify({
-        'message': 'API RESTful com Flask',
-        'version': '1.0',
-        'endpoints': {
-            'users': '/api/users',
-            'posts': '/api/posts',
-            'health': '/api/health'
-        }
-    })
-
-@app.route('/api/health')
-def health():
-    """Verifica saúde da API"""
-    return jsonify({
-        'status': 'ok',
-        'timestamp': datetime.now().isoformat(),
-        'total_users': len(db['users']),
-        'total_posts': len(db['posts'])
-    })
-
-# ==================== USERS ====================
-
-@app.route('/api/users', methods=['GET'])
-def get_users():
-    """Lista todos os usuários"""
-    return jsonify({
-        'success': True,
-        'data': db['users'],
-        'count': len(db['users'])
-    })
-
-@app.route('/api/users/<int:user_id>', methods=['GET'])
-def get_user(user_id):
-    """Busca usuário por ID"""
-    user = next((u for u in db['users'] if u['id'] == user_id), None)
-    
-    if user:
-        return jsonify({
-            'success': True,
-            'data': user
-        })
-    else:
-        return jsonify({
-            'success': False,
-            'error': 'Usuário não encontrado'
-        }), 404
-
-@app.route('/api/users', methods=['POST'])
-def create_user():
-    """Cria novo usuário"""
-    data = request.get_json()
-    
-    # Validação
-    if not data or 'name' not in data or 'email' not in data:
-        return jsonify({
-            'success': False,
-            'error': 'Nome e email são obrigatórios'
-        }), 400
-    
-    # Verificar email duplicado
-    if any(u['email'] == data['email'] for u in db['users']):
-        return jsonify({
-            'success': False,
-            'error': 'Email já cadastrado'
-        }), 400
-    
-    # Criar usuário
-    new_user = {
-        'id': len(db['users']) + 1,
-        'name': data['name'],
-        'email': data['email'],
-        'created_at': datetime.now().isoformat()
-    }
-    
-    db['users'].append(new_user)
-    save_data(db)
-    
-    return jsonify({
-        'success': True,
-        'data': new_user,
-        'message': 'Usuário criado com sucesso'
-    }), 201
-
-@app.route('/api/users/<int:user_id>', methods=['PUT'])
-def update_user(user_id):
-    """Atualiza usuário"""
-    user = next((u for u in db['users'] if u['id'] == user_id), None)
-    
-    if not user:
-        return jsonify({
-            'success': False,
-            'error': 'Usuário não encontrado'
-        }), 404
-    
-    data = request.get_json()
-    
-    if 'name' in data:
-        user['name'] = data['name']
-    if 'email' in data:
-        user['email'] = data['email']
-    
-    user['updated_at'] = datetime.now().isoformat()
-    
-    save_data(db)
-    
-    return jsonify({
-        'success': True,
-        'data': user,
-        'message': 'Usuário atualizado com sucesso'
-    })
-
-@app.route('/api/users/<int:user_id>', methods=['DELETE'])
-def delete_user(user_id):
-    """Deleta usuário"""
-    user = next((u for u in db['users'] if u['id'] == user_id), None)
-    
-    if not user:
-        return jsonify({
-            'success': False,
-            'error': 'Usuário não encontrado'
-        }), 404
-    
-    db['users'] = [u for u in db['users'] if u['id'] != user_id]
-    save_data(db)
-    
-    return jsonify({
-        'success': True,
-        'message': 'Usuário deletado com sucesso'
-    })
-
-# ==================== POSTS ====================
-
-@app.route('/api/posts', methods=['GET'])
-def get_posts():
-    """Lista todos os posts"""
-    return jsonify({
-        'success': True,
-        'data': db['posts'],
-        'count': len(db['posts'])
-    })
-
-@app.route('/api/posts/<int:post_id>', methods=['GET'])
-def get_post(post_id):
-    """Busca post por ID"""
-    post = next((p for p in db['posts'] if p['id'] == post_id), None)
-    
-    if post:
-        return jsonify({
-            'success': True,
-            'data': post
-        })
-    else:
-        return jsonify({
-            'success': False,
-            'error': 'Post não encontrado'
-        }), 404
-
-@app.route('/api/posts', methods=['POST'])
-def create_post():
-    """Cria novo post"""
-    data = request.get_json()
-    
-    # Validação
-    if not data or 'title' not in data or 'content' not in data or 'user_id' not in data:
-        return jsonify({
-            'success': False,
-            'error': 'Título, conteúdo e user_id são obrigatórios'
-        }), 400
-    
-    # Verificar se usuário existe
-    user = next((u for u in db['users'] if u['id'] == data['user_id']), None)
-    if not user:
-        return jsonify({
-            'success': False,
-            'error': 'Usuário não encontrado'
-        }), 404
-    
-    # Criar post
-    new_post = {
-        'id': len(db['posts']) + 1,
-        'title': data['title'],
-        'content': data['content'],
-        'user_id': data['user_id'],
-        'author': user['name'],
-        'created_at': datetime.now().isoformat()
-    }
-    
-    db['posts'].append(new_post)
-    save_data(db)
-    
-    return jsonify({
-        'success': True,
-        'data': new_post,
-        'message': 'Post criado com sucesso'
-    }), 201
-
-@app.route('/api/posts/<int:post_id>', methods=['PUT'])
-def update_post(post_id):
-    """Atualiza post"""
-    post = next((p for p in db['posts'] if p['id'] == post_id), None)
-    
-    if not post:
-        return jsonify({
-            'success': False,
-            'error': 'Post não encontrado'
-        }), 404
-    
-    data = request.get_json()
-    
-    if 'title' in data:
-        post['title'] = data['title']
-    if 'content' in data:
-        post['content'] = data['content']
-    
-    post['updated_at'] = datetime.now().isoformat()
-    
-    save_data(db)
-    
-    return jsonify({
-        'success': True,
-        'data': post,
-        'message': 'Post atualizado com sucesso'
-    })
-
-@app.route('/api/posts/<int:post_id>', methods=['DELETE'])
-def delete_post(post_id):
-    """Deleta post"""
-    post = next((p for p in db['posts'] if p['id'] == post_id), None)
-    
-    if not post:
-        return jsonify({
-            'success': False,
-            'error': 'Post não encontrado'
-        }), 404
-    
-    db['posts'] = [p for p in db['posts'] if p['id'] != post_id]
-    save_data(db)
-    
-    return jsonify({
-        'success': True,
-        'message': 'Post deletado com sucesso'
-    })
-
-# ==================== BUSCA ====================
-
-@app.route('/api/search', methods=['GET'])
-def search():
-    """Busca global"""
-    query = request.args.get('q', '').lower()
-    
-    if not query:
-        return jsonify({
-            'success': False,
-            'error': 'Query não fornecida'
-        }), 400
-    
-    # Buscar em users
-    users_result = [
-        u for u in db['users']
-        if query in u['name'].lower() or query in u['email'].lower()
+    urls = [
+        "https://example.com",
+        "https://example.com/about"
     ]
     
-    # Buscar em posts
-    posts_result = [
-        p for p in db['posts']
-        if query in p['title'].lower() or query in p['content'].lower()
-    ]
+    # Executar scraping
+    results = scraper.scrape_multiple(urls)
     
-    return jsonify({
-        'success': True,
-        'query': query,
-        'results': {
-            'users': users_result,
-            'posts': posts_result
-        },
-        'total': len(users_result) + len(posts_result)
-    })
-
-# ==================== ERROR HANDLERS ====================
-
-@app.errorhandler(404)
-def not_found(error):
-    return jsonify({
-        'success': False,
-        'error': 'Endpoint não encontrado'
-    }), 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    return jsonify({
-        'success': False,
-        'error': 'Erro interno do servidor'
-    }), 500
-
-# ==================== MAIN ====================
-
-if __name__ == '__main__':
-    print("🚀 Iniciando API...")
-    print("📍 http://localhost:5000")
-    print("\n📚 Endpoints disponíveis:")
-    print("   GET    /api/users")
-    print("   POST   /api/users")
-    print("   GET    /api/users/<id>")
-    print("   PUT    /api/users/<id>")
-    print("   DELETE /api/users/<id>")
-    print("   GET    /api/posts")
-    print("   POST   /api/posts")
-    print("   GET    /api/search?q=<query>")
-    print("\n✅ API rodando!")
+    # Salvar resultados
+    scraper.save_json()
+    scraper.save_csv()
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Mostrar resumo
+    print(f"\\n📊 Resumo:")
+    print(f"   Páginas: {len(results)}")
+    print(f"   Total H1: {sum(len(r.get('h1', [])) for r in results)}")
+    print(f"   Total H2: {sum(len(r.get('h2', [])) for r in results)}")
 ''',
             "lang": "python",
             "ext": ".py"
@@ -2250,36 +3434,33 @@ if __name__ == '__main__':
     }
 }
 
-# ====== TELA DE LOGIN ======
+# ==================== TELA DE LOGIN ====================
 if not st.session_state.authenticated:
     st.markdown("""
-    <div class="header-premium">
+    <div class="header-ultra">
         <h1>🎮 ScriptMaster AI Pro</h1>
-        <p style="color: white; font-size: 1.2rem;">Gerador Profissional de Scripts e Jogos com IA Avançada</p>
-        <p style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">🔐 Login automático - Sistema aprimorado!</p>
+        <p>Gerador de Código com IA • Interface Premium • Recursos Ilimitados</p>
     </div>
     """, unsafe_allow_html=True)
     
-    col1, col2 = st.columns([1, 1])
+    col1, col2 = st.columns([1, 1], gap="large")
     
     with col1:
         st.markdown("### 🔐 Entrar no Sistema")
         
-        username = st.text_input("👤 Seu nome", placeholder="Digite seu nome", key="login_username")
-        access_code = st.text_input("🎫 Código de acesso VIP", type="password", placeholder="Cole seu código VIP aqui", key="login_code")
+        username = st.text_input("👤 Seu nome de usuário", placeholder="Digite seu nome", key="login_username")
+        access_code = st.text_input("🎫 Código VIP (opcional)", type="password", placeholder="Cole seu código VIP", key="login_code")
         
-        remember = st.checkbox("🔒 Manter conectado (recomendado)", value=True)
-        
-        st.caption("💡 Marque para entrar automaticamente na próxima vez")
+        remember = st.checkbox("🔒 Manter conectado e salvar dados", value=True)
         
         col_btn1, col_btn2 = st.columns(2)
         
         with col_btn1:
-            if st.button("🚀 ENTRAR COM CÓDIGO VIP", use_container_width=True, type="primary"):
+            if st.button("🚀 ENTRAR VIP", use_container_width=True, type="primary"):
                 if not username:
                     st.error("❌ Digite seu nome!")
                 elif not access_code:
-                    st.error("❌ Digite o código de acesso!")
+                    st.error("❌ Digite o código VIP!")
                 elif access_code == MASTER_CODE:
                     st.session_state.authenticated = True
                     st.session_state.is_master = True
@@ -2289,7 +3470,6 @@ if not st.session_state.authenticated:
                     if remember:
                         save_login(username, True, None)
                     
-                    st.success(f"✅ Bem-vindo, {username}! Acesso MASTER concedido!")
                     st.balloons()
                     st.rerun()
                     
@@ -2312,16 +3492,12 @@ if not st.session_state.authenticated:
                         if remember:
                             save_login(username, False, vip_until)
                         
-                        dias_txt = "ILIMITADO ♾️" if days == 999 else f"{days} dias"
-                        st.success(f"✅ VIP ativado por {dias_txt}!")
                         st.balloons()
                         st.rerun()
                     else:
-                        st.error("❌ Este código já foi usado anteriormente!")
-                        st.info("💡 Solicite um novo código VIP")
+                        st.error("❌ Código já usado!")
                 else:
-                    st.error("❌ Código inválido ou expirado!")
-                    st.warning("💡 Verifique se digitou corretamente ou solicite um novo código")
+                    st.error("❌ Código inválido!")
         
         with col_btn2:
             if st.button("🆓 Modo Grátis", use_container_width=True):
@@ -2335,669 +3511,102 @@ if not st.session_state.authenticated:
                 if remember:
                     save_login(nome, False, None)
                 
-                st.info(f"ℹ️ Modo gratuito ativado para {nome}")
                 st.rerun()
-        
-        st.divider()
-        
-        st.success("""
-        ✅ **Login Automático Ativado:**
-        
-        🔒 Marque "Manter conectado"
-        📌 Salve esta página nos favoritos
-        🚀 Na próxima vez, entre automaticamente!
-        💾 Seus dados ficam salvos de forma segura
-        """)
-    
-    with col2:
-        st.markdown("### 🎯 Recursos Disponíveis")
-        
-        st.markdown("""
-        **🆓 MODO GRATUITO:**
-        - ✅ Geração básica de código
-        - ✅ Templates simples
-        - ✅ Editar e baixar scripts
-        - ⚠️ Limite de uso diário
-        """)
-        
-        st.divider()
-        
-        st.markdown("""
-        <div class="vip-info">
-            <h3 style="margin:0; color: white;">👑 MODO VIP</h3>
-            <p style="margin: 0.5rem 0 0 0; font-size: 0.95rem;">
-                ✅ Geração ILIMITADA de código<br>
-                ✅ TODOS os templates premium<br>
-                ✅ Salvar scripts permanentemente<br>
-                ✅ Histórico de geração<br>
-                ✅ Sistema de favoritos<br>
-                ✅ Suporte prioritário<br>
-                ✅ Sem anúncios<br>
-                ✅ Novos recursos exclusivos
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.divider()
-        
-        st.markdown("### 💻 O que você pode criar:")
-        st.markdown("""
-        **🎮 Jogos:**
-        - Godot 4.6 (GDScript/C#)
-        - Unity (C#)
-        - HTML5 (Phaser, Canvas)
-        - React Native Mobile
-        
-        **🤖 Bots:**
-        - Discord Bot (Slash Commands)
-        - Telegram Bot (Inline Buttons)
-        - WhatsApp Bot
-        
-        **💾 Scripts:**
-        - Python (Web Scraper, API, Automação)
-        - JavaScript/Node.js
-        - SQL Database
-        - Bash/PowerShell
-        """)
         
         st.divider()
         
         st.info("""
-        **🎁 Como conseguir acesso VIP?**
+        **💡 Dica:** Marque "Manter conectado" para salvar:
+        - ✅ Seu login
+        - ✅ Histórico de códigos
+        - ✅ Scripts favoritos
+        - ✅ Conversas do chat
+        """)
+    
+    with col2:
+        st.markdown("### ⚡ Comparativo de Planos")
         
-        📧 Entre em contato para solicitar seu código VIP
+        col_free, col_vip = st.columns(2)
         
-        🎫 Códigos podem ter diferentes durações:
-        - 1 dia (teste)
-        - 7 dias
-        - 30 dias
-        - Ilimitado ♾️
+        with col_free:
+            st.markdown("""
+            <div style="background: #2d2d44; padding: 1.5rem; border-radius: 16px; border: 1px solid #444;">
+                <h4 style="color: #a0a0a0; margin:0;">🆓 GRÁTIS</h4>
+                <hr style="border-color: #444;">
+                <p style="color: #888; font-size: 14px;">
+                    ✅ 4 gerações/dia<br>
+                    ✅ 10 msgs chat/dia<br>
+                    ✅ Templates básicos<br>
+                    ❌ Histórico limitado<br>
+                    ❌ Sem favoritos salvos
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col_vip:
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #FFD700, #FFA500); padding: 1.5rem; border-radius: 16px;">
+                <h4 style="color: #1a1a2e; margin:0;">👑 VIP</h4>
+                <hr style="border-color: rgba(0,0,0,0.2);">
+                <p style="color: #1a1a2e; font-size: 14px;">
+                    ✅ Geração ILIMITADA<br>
+                    ✅ Chat ILIMITADO<br>
+                    ✅ TODOS templates<br>
+                    ✅ Histórico completo<br>
+                    ✅ Favoritos salvos
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.divider()
+        
+        st.markdown("### 💻 O que você pode criar")
+        st.markdown("""
+        - 🎮 **Jogos HTML5** para Android (PWA)
+        - 🕹️ **Godot 4.x** Scripts completos
+        - 🛡️ **Game Guardian** Hacks de memória
+        - 🤖 **Bots Discord/Telegram**
+        - 🐍 **Python** Web scrapers, APIs
+        - 💾 **Muito mais...**
         """)
     
     st.stop()
 
-# ====== SIDEBAR (LOGADO) ======
+# ==================== SIDEBAR ====================
 with st.sidebar:
     st.markdown(f"""
     <div class="welcome-box">
-        <h3 style="margin:0;">👋 Olá, {st.session_state.username}!</h3>
-        <p style="margin:0.5rem 0 0 0; font-size: 0.9rem;">
-            ✅ Login salvo automaticamente
+        <h3>👋 {st.session_state.username}</h3>
+        <p style="margin:0; opacity:0.9; font-size:14px;">
+            {"🔥 ADMIN" if st.session_state.is_master else "👑 VIP" if is_vip_active() else "🆓 Free"}
         </p>
     </div>
     """, unsafe_allow_html=True)
     
+    # Badge
     if st.session_state.is_master:
         st.markdown('<div class="master-badge">🔥 ADMINISTRADOR</div>', unsafe_allow_html=True)
-        
-        st.divider()
-        st.markdown("### 🎫 Painel de Códigos VIP")
-        
-        with st.expander("➕ Criar Novo Código VIP", expanded=False):
-            novo_codigo = st.text_input("📝 Nome do código", key="new_code", placeholder="Ex: VIP2024")
-            tipo = st.selectbox("⏱️ Duração do acesso", ["1 dia", "7 dias", "30 dias", "Ilimitado"])
-            
-            if st.button("✨ Gerar Código", use_container_width=True):
-                if novo_codigo and novo_codigo not in st.session_state.created_codes:
-                    days_map = {"1 dia": 1, "7 dias": 7, "30 dias": 30, "Ilimitado": 999}
-                    st.session_state.created_codes[novo_codigo] = {
-                        "days": days_map[tipo],
-                        "created_at": datetime.now().isoformat(),
-                        "used": False
-                    }
-                    st.success("✅ Código VIP criado com sucesso!")
-                    st.code(novo_codigo, language=None)
-                    st.info("💡 Compartilhe este código com o usuário")
-                elif novo_codigo in st.session_state.created_codes:
-                    st.error("❌ Este código já existe!")
-                else:
-                    st.error("❌ Digite um nome para o código!")
-        
-        if st.session_state.created_codes:
-            st.markdown("### 📋 Códigos Criados")
-            
-            total_codes = len(st.session_state.created_codes)
-            used_codes = sum(1 for c in st.session_state.created_codes.values() if c.get("used"))
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Total", total_codes)
-            with col2:
-                st.metric("Usados", used_codes)
-            
-            st.divider()
-            
-            for code, info in list(st.session_state.created_codes.items())[:10]:
-                status = "✅ USADO" if info.get("used") else "🎫 ATIVO"
-                days_icon = "♾️" if info["days"] == 999 else f"{info['days']}d"
-                
-                with st.expander(f"{status[:2]} {code} ({days_icon})"):
-                    st.markdown(f"**Status:** {status}")
-                    st.markdown(f"**Duração:** {days_icon}")
-                    st.markdown(f"**Criado em:** {datetime.fromisoformat(info['created_at']).strftime('%d/%m/%Y %H:%M')}")
-                    
-                    if info.get("used"):
-                        st.markdown(f"**Usado por:** {info.get('used_by', 'Desconhecido')}")
-                        st.markdown(f"**Usado em:** {datetime.fromisoformat(info['used_at']).strftime('%d/%m/%Y %H:%M')}")
-                    else:
-                        st.code(code, language=None)
-                        if st.button("🗑️ Deletar Código", key=f"del_code_{code}"):
-                            del st.session_state.created_codes[code]
-                            st.success("✅ Código deletado!")
-                            st.rerun()
-        
-        st.divider()
-    
     elif is_vip_active():
         dias_restantes = (st.session_state.vip_until - datetime.now()).days
-        st.markdown(f'<div class="vip-badge">👑 VIP ATIVO - {dias_restantes} dias</div>', unsafe_allow_html=True)
-        st.divider()
+        st.markdown(f'<div class="vip-badge">👑 VIP - {dias_restantes}d</div>', unsafe_allow_html=True)
     else:
-        st.info("🆓 Modo Gratuito Ativo")
-        st.caption("Faça upgrade para VIP e tenha acesso ilimitado!")
-        st.divider()
-    
-    # BOTÃO SAIR
-    if st.button("🚪 SAIR DA CONTA", use_container_width=True, type="secondary"):
-        clear_login()
-        st.session_state.authenticated = False
-        st.session_state.login_checked = False
-        st.success("✅ Você saiu com sucesso!")
-        st.info("🔄 Redirecionando para login...")
-        st.rerun()
-    
-    st.caption("💾 Seus dados estão salvos de forma segura")
-    
-    st.divider()
-    
-    # Templates Organizados
-    st.markdown("### 📚 Templates Prontos")
-    
-    for categoria, templates in TEMPLATES.items():
-        with st.expander(categoria):
-            for name, template_data in templates.items():
-                if st.button(name, use_container_width=True, key=f"temp_{name}"):
-                    st.session_state.current_script = template_data['code']
-                    st.session_state.current_language = template_data['lang']
-                    st.toast(f"✅ Template '{name}' carregado!")
-                    st.rerun()
-    
-    st.divider()
-    
-    # Scripts salvos
-    if st.session_state.saved_scripts:
-        st.markdown("### 💾 Meus Scripts")
-        for idx, s in enumerate(st.session_state.saved_scripts[-5:]):
-            if st.button(f"📄 {s['name']}", key=f"saved_{idx}", use_container_width=True):
-                st.session_state.current_script = s['code']
-                st.rerun()
+        st.markdown('<div class="free-badge">🆓 Modo Gratuito</div>', unsafe_allow_html=True)
         
-        if len(st.session_state.saved_scripts) > 5:
-            st.caption(f"+ {len(st.session_state.saved_scripts) - 5} mais na biblioteca")
-    
-    st.divider()
-    st.caption(f"📊 Total de scripts: {len(st.session_state.saved_scripts)}")
-
-# ====== ÁREA PRINCIPAL ======
-
-st.markdown("""
-<div class="header-premium">
-    <h1>🎮 ScriptMaster AI Pro</h1>
-    <p style="color: white;">Gerador Profissional de Scripts e Jogos com Inteligência Artificial Avançada</p>
-</div>
-""", unsafe_allow_html=True)
-
-tab1, tab2, tab3, tab4 = st.tabs(["🤖 Gerar Código", "💻 Editor", "📚 Biblioteca", "📊 Estatísticas"])
-
-# TAB 1: GERAR
-with tab1:
-    st.markdown("### 🎯 Descreva o que você quer criar")
-    
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        prompt = st.text_area(
-            "📝 Descrição detalhada:",
-            placeholder="Ex: Crie um jogo de plataforma 2D em Godot 4.6 para mobile com controles touch, sistema de score, moedas colecionáveis e 3 níveis de dificuldade",
-            height=150,
-            key="prompt"
-        )
-    
-    with col2:
-        tipo = st.selectbox(
-            "🔤 Tipo de código",
-            [
-                "Godot 4.6 (GDScript)",
-                "Godot 4.6 (C#)",
-                "Unity (C#)",
-                "HTML5 - Canvas Puro",
-                "HTML5 - Phaser 3",
-                "React Native Mobile",
-                "Python Script",
-                "JavaScript/Node.js",
-                "Discord Bot",
-                "Telegram Bot",
-                "SQL Database",
-                "Bash Script",
-                "PowerShell",
-                "Flask API",
-                "FastAPI",
-                "Node.js Express"
-            ]
-        )
+        # Medidor de uso
+        usage = get_usage_stats()
+        gen_used = usage.get("generate", 0)
+        chat_used = usage.get("chat", 0)
         
-        nivel = st.select_slider("📊 Complexidade", ["Básico", "Intermediário", "Avançado", "Expert"])
+        st.markdown("#### 📊 Uso Diário")
         
-        incluir_comentarios = st.checkbox("💬 Incluir comentários detalhados", value=True)
-        incluir_testes = st.checkbox("🧪 Incluir testes unitários", value=False)
-    
-    if st.button("⚡ GERAR CÓDIGO COMPLETO", use_container_width=True, type="primary"):
-        if not prompt:
-            st.error("❌ Por favor, descreva o que você quer criar!")
-        else:
-            with st.spinner("🔮 Gerando código profissional... Isso pode levar alguns segundos..."):
-                try:
-                    modelos = get_models()
-                    if not modelos:
-                        st.error("❌ API temporariamente indisponível. Tente novamente em alguns instantes.")
-                        st.stop()
-                    
-                    model = genai.GenerativeModel(modelos[0])
-                    
-                    extras = []
-                    if incluir_comentarios:
-                        extras.append("Comentários explicativos DETALHADOS em português")
-                    if incluir_testes:
-                        extras.append("Testes unitários funcionais")
-                    
-                    extras_text = "\n".join(f"{i+1}. {extra}" for i, extra in enumerate(extras)) if extras else "Nenhum extra solicitado"
-                    
-                    prompt_ia = f"""
-Você é um programador EXPERT em {tipo}. Crie código COMPLETO, FUNCIONAL e PROFISSIONAL.
-
-TAREFA: {prompt}
-
-NÍVEL DE COMPLEXIDADE: {nivel}
-
-EXTRAS SOLICITADOS:
-{extras_text}
-
-REGRAS OBRIGATÓRIAS:
-1. Código 100% COMPLETO e pronto para usar
-2. Seguir as melhores práticas da linguagem
-3. Incluir tratamento de erros
-4. Se for jogo: controles funcionais, física básica, sistema de pontuação
-5. Se for mobile: otimizar para touch e performance
-6. Se for bot: comandos funcionais e tratamento de eventos
-7. Se for API: rotas RESTful, validação de dados
-8. Código limpo e bem estruturado
-9. Segurança em primeiro lugar
-
-IMPORTANTE: Retorne APENAS o código puro, SEM markdown, SEM ```, SEM explicações extras.
-Comece diretamente com o código.
-"""
-                    
-                    response = model.generate_content(prompt_ia)
-                    codigo = response.text
-                    
-                    # Limpar markdown
-                    codigo = re.sub(r'^```[\w]*\n?', '', codigo)
-                    codigo = re.sub(r'\n?```$', '', codigo)
-                    codigo = codigo.strip()
-                    
-                    st.session_state.current_script = codigo
-                    
-                    # Adicionar ao histórico
-                    st.session_state.script_history.append({
-                        'prompt': prompt,
-                        'code': codigo,
-                        'tipo': tipo,
-                        'timestamp': datetime.now().isoformat()
-                    })
-                    
-                    st.success("✅ Código gerado com sucesso!")
-                    st.balloons()
-                    
-                    # Detectar linguagem
-                    lang, ext = detect_language(codigo)
-                    
-                    st.session_state.current_language = lang
-                    
-                    # Mostrar código
-                    st.markdown("### 📄 Seu Código Está Pronto:")
-                    st.code(codigo, language=lang)
-                    
-                    # Informações
-                    linhas = len(codigo.split('\n'))
-                    caracteres = len(codigo)
-                    palavras = len(codigo.split())
-                    
-                    col_info1, col_info2, col_info3, col_info4 = st.columns(4)
-                    with col_info1:
-                        st.metric("📏 Linhas", linhas)
-                    with col_info2:
-                        st.metric("🔤 Caracteres", caracteres)
-                    with col_info3:
-                        st.metric("📝 Palavras", palavras)
-                    with col_info4:
-                        st.metric("💾 Tipo", lang.upper())
-                    
-                    st.divider()
-                    
-                    # Botões de ação
-                    col_a, col_b, col_c, col_d = st.columns(4)
-                    
-                    with col_a:
-                        st.download_button(
-                            "📥 BAIXAR",
-                            data=codigo,
-                            file_name=f"script{ext}",
-                            mime="text/plain",
-                            use_container_width=True,
-                            type="primary"
-                        )
-                    
-                    with col_b:
-                        if st.button("💾 SALVAR", use_container_width=True, key="save_gen"):
-                            st.session_state.saved_scripts.append({
-                                "name": f"Script_{len(st.session_state.saved_scripts)+1}{ext}",
-                                "code": codigo,
-                                "language": lang,
-                                "created_at": datetime.now().isoformat()
-                            })
-                            st.success("✅ Script salvo!")
-                            st.rerun()
-                    
-                    with col_c:
-                        if st.button("⭐ FAVORITAR", use_container_width=True, key="fav_gen"):
-                            st.session_state.favorites.append({
-                                "name": f"Favorito_{len(st.session_state.favorites)+1}{ext}",
-                                "code": codigo,
-                                "language": lang,
-                                "created_at": datetime.now().isoformat()
-                            })
-                            st.success("⭐ Adicionado aos favoritos!")
-                            st.rerun()
-                    
-                    with col_d:
-                        if st.button("✏️ EDITAR", use_container_width=True, key="edit_gen"):
-                            st.info("👉 Vá para a aba 'Editor'")
-                    
-                except Exception as e:
-                    st.error(f"❌ Erro ao gerar código: {str(e)}")
-                    st.info("💡 Dicas: Tente descrever de forma mais simples ou escolha outro tipo de código")
-
-# TAB 2: EDITOR
-with tab2:
-    st.markdown("### 💻 Editor de Código Profissional")
-    
-    if st.session_state.current_script:
-        col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+        gen_percent = min(100, (gen_used / DAILY_LIMIT_FREE) * 100)
+        gen_color = "green" if gen_percent < 50 else "yellow" if gen_percent < 80 else "red"
         
-        with col1:
-            nome = st.text_input("📝 Nome do arquivo", value="meu_script", key="filename")
-        
-        with col2:
-            lang, ext = detect_language(st.session_state.current_script)
-            ext_input = st.text_input("📄 Extensão", value=ext, key="ext")
-        
-        with col3:
-            theme = st.selectbox("🎨 Tema", ["Escuro", "Claro"])
-        
-        with col4:
-            st.download_button(
-                "📥 Download",
-                data=st.session_state.current_script,
-                file_name=f"{nome}{ext_input}",
-                use_container_width=True
-            )
-        
-        codigo_edit = st.text_area(
-            "✏️ Edite seu código:",
-            value=st.session_state.current_script,
-            height=500,
-            key="editor"
-        )
-        
-        st.session_state.current_script = codigo_edit
-        
-        col_s, col_c, col_f, col_l = st.columns(4)
-        
-        with col_s:
-            if st.button("💾 Salvar", use_container_width=True):
-                st.session_state.saved_scripts.append({
-                    "name": f"{nome}{ext_input}",
-                    "code": codigo_edit,
-                    "language": st.session_state.current_language,
-                    "created_at": datetime.now().isoformat()
-                })
-                st.success("✅ Script salvo!")
-                st.rerun()
-        
-        with col_c:
-            if st.button("📋 Copiar", use_container_width=True):
-                st.code(codigo_edit)
-                st.info("📋 Código pronto para copiar!")
-        
-        with col_f:
-            if st.button("⭐ Favoritar", use_container_width=True):
-                st.session_state.favorites.append({
-                    "name": f"{nome}{ext_input}",
-                    "code": codigo_edit,
-                    "language": st.session_state.current_language,
-                    "created_at": datetime.now().isoformat()
-                })
-                st.success("⭐ Adicionado aos favoritos!")
-                st.rerun()
-        
-        with col_l:
-            if st.button("🗑️ Limpar", use_container_width=True):
-                st.session_state.current_script = ""
-                st.rerun()
-        
-        st.divider()
-        
-        # Estatísticas
-        linhas_edit = len(codigo_edit.split('\n'))
-        palavras = len(codigo_edit.split())
-        
-        col_stat1, col_stat2, col_stat3 = st.columns(3)
-        with col_stat1:
-            st.metric("📏 Linhas", linhas_edit)
-        with col_stat2:
-            st.metric("📝 Palavras", palavras)
-        with col_stat3:
-            st.metric("💾 Caracteres", len(codigo_edit))
-        
-        st.divider()
-        st.markdown("### 👁️ Preview do Código")
-        st.code(codigo_edit, language=st.session_state.current_language)
-        
-    else:
-        st.info("📝 Nenhum código carregado no editor!")
-        
-        st.markdown("### 💡 Como começar:")
-        st.markdown("""
-        **Opção 1:** Vá para a aba **Gerar Código** e crie um novo script
-        
-        **Opção 2:** Clique em um **Template** na barra lateral
-        
-        **Opção 3:** Abra um script da **Biblioteca**
-        
-        O código aparecerá aqui automaticamente para você editar!
-        """)
-
-# TAB 3: BIBLIOTECA
-with tab3:
-    st.markdown("### 📚 Biblioteca de Scripts Salvos")
-    
-    tab_todos, tab_favoritos = st.tabs(["📄 Todos os Scripts", "⭐ Favoritos"])
-    
-    with tab_todos:
-        if st.session_state.saved_scripts:
-            col_filter1, col_filter2 = st.columns(2)
-            
-            with col_filter1:
-                search = st.text_input("🔍 Buscar script", placeholder="Digite para filtrar...")
-            
-            with col_filter2:
-                ordem = st.selectbox("📊 Ordenar por", ["Mais recentes", "Mais antigos", "Nome A-Z"])
-            
-            st.divider()
-            
-            scripts_filtered = st.session_state.saved_scripts.copy()
-            
-            if search:
-                scripts_filtered = [s for s in scripts_filtered if search.lower() in s['name'].lower()]
-            
-            if ordem == "Mais antigos":
-                scripts_filtered = scripts_filtered
-            elif ordem == "Mais recentes":
-                scripts_filtered = list(reversed(scripts_filtered))
-            elif ordem == "Nome A-Z":
-                scripts_filtered = sorted(scripts_filtered, key=lambda x: x['name'])
-            
-            for idx, script in enumerate(scripts_filtered):
-                data_criacao = datetime.fromisoformat(script['created_at']).strftime('%d/%m/%Y às %H:%M')
+        st.markdown(f"""
+        <div class="usage-meter">
+            <div style="display:flex; justify-content:space-between; color:white; font-size:14px;">
+                <span>⚡ Gerações</span>
+                <span>{gen_used}/{DAILY_LIMIT_FREE}</span>
+            </div>
+            <div class="usage-bar">
                 
-                with st.expander(f"📄 {script['name']} - Criado em {data_criacao}"):
-                    st.code(script['code'], language=script.get('language', 'python'))
-                    
-                    linhas_script = len(script['code'].split('\n'))
-                    tamanho_kb = len(script['code']) / 1024
-                    
-                    col_stat1, col_stat2 = st.columns(2)
-                    with col_stat1:
-                        st.caption(f"📏 {linhas_script} linhas")
-                    with col_stat2:
-                        st.caption(f"💾 {tamanho_kb:.2f} KB")
-                    
-                    st.divider()
-                    
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.download_button(
-                            "📥 Download",
-                            data=script['code'],
-                            file_name=script['name'],
-                            key=f"dl_{idx}",
-                            use_container_width=True
-                        )
-                    
-                    with col2:
-                        if st.button("📋 Copiar", key=f"cp_{idx}", use_container_width=True):
-                            st.session_state.current_script = script['code']
-                            st.success("✅ Código copiado!")
-                            st.rerun()
-                    
-                    with col3:
-                        if st.button("✏️ Editar", key=f"ed_{idx}", use_container_width=True):
-                            st.session_state.current_script = script['code']
-                            st.info("👉 Vá para a aba 'Editor'")
-                    
-                    with col4:
-                        if st.button("🗑️ Deletar", key=f"del_{idx}", use_container_width=True):
-                            real_idx = st.session_state.saved_scripts.index(script)
-                            st.session_state.saved_scripts.pop(real_idx)
-                            st.success("✅ Script deletado!")
-                            st.rerun()
-            
-            if not scripts_filtered and search:
-                st.warning(f"🔍 Nenhum script encontrado com '{search}'")
-        else:
-            st.info("📭 Sua biblioteca está vazia!")
-    
-    with tab_favoritos:
-        if st.session_state.favorites:
-            for idx, fav in enumerate(st.session_state.favorites):
-                data_criacao = datetime.fromisoformat(fav['created_at']).strftime('%d/%m/%Y às %H:%M')
-                
-                with st.expander(f"⭐ {fav['name']} - {data_criacao}"):
-                    st.code(fav['code'], language=fav.get('language', 'python'))
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.download_button(
-                            "📥 Download",
-                            data=fav['code'],
-                            file_name=fav['name'],
-                            key=f"dl_fav_{idx}",
-                            use_container_width=True
-                        )
-                    
-                    with col2:
-                        if st.button("🗑️ Remover", key=f"del_fav_{idx}", use_container_width=True):
-                            st.session_state.favorites.pop(idx)
-                            st.success("✅ Removido dos favoritos!")
-                            st.rerun()
-        else:
-            st.info("⭐ Nenhum favorito ainda!")
-
-# TAB 4: ESTATÍSTICAS
-with tab4:
-    st.markdown("### 📊 Estatísticas de Uso")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("📄 Scripts Salvos", len(st.session_state.saved_scripts))
-    
-    with col2:
-        st.metric("⭐ Favoritos", len(st.session_state.favorites))
-    
-    with col3:
-        st.metric("📜 Histórico", len(st.session_state.script_history))
-    
-    with col4:
-        total_linhas = sum(len(s['code'].split('\n')) for s in st.session_state.saved_scripts)
-        st.metric("📏 Linhas Totais", total_linhas)
-    
-    st.divider()
-    
-    if st.session_state.script_history:
-        st.markdown("### 📜 Histórico de Gerações")
-        
-        for idx, hist in enumerate(reversed(st.session_state.script_history[-10:])):
-            data = datetime.fromisoformat(hist['timestamp']).strftime('%d/%m/%Y %H:%M')
-            
-            with st.expander(f"🕐 {data} - {hist['tipo']}"):
-                st.markdown(f"**Prompt:** {hist['prompt']}")
-                st.code(hist['code'][:500] + "..." if len(hist['code']) > 500 else hist['code'])
-                
-                if st.button("♻️ Reutilizar este código", key=f"reuse_{idx}"):
-                    st.session_state.current_script = hist['code']
-                    st.success("✅ Código carregado no editor!")
-                    st.rerun()
-    else:
-        st.info("📭 Nenhum histórico ainda")
-
-# ====== RODAPÉ ======
-st.markdown("---")
-col1, col2, col3, col4, col5 = st.columns(5)
-
-with col1:
-    st.metric("📊 Scripts", len(st.session_state.saved_scripts))
-
-with col2:
-    if st.session_state.is_master:
-        status_text = "🔥 ADMIN"
-    elif is_vip_active():
-        status_text = "👑 VIP"
-    else:
-        status_text = "🆓 FREE"
-    st.metric("⚡ Plano", status_text)
-
-with col3:
-    linhas_atual = len(st.session_state.current_script.split('\n')) if st.session_state.current_script else 0
-    st.metric("📏 Linhas", linhas_atual)
-
-with col4:
-    login_status = "Salvo ✅" if "user" in st.query_params else "Temp"
-    st.metric("🔐 Login", login_status)
-
-with col5:
-    st.metric("⭐ Favs", len(st.session_state.favorites))
-
-st.caption("💡 Desenvolvido por Rynamru | Versão 2.0 Pro")

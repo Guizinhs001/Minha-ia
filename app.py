@@ -1,5 +1,6 @@
 import streamlit as st
-from anthropic import Anthropic
+import requests
+import json
 
 # ====== CONFIG ======
 st.set_page_config(
@@ -8,21 +9,21 @@ st.set_page_config(
     layout="centered"
 )
 
-# ====== CSS ESTILO CHATGPT ======
+# ====== CSS CHATGPT ======
 st.markdown("""
 <style>
     .stApp {
         background-color: #343541;
     }
     
-    .main-title {
+    .title {
         text-align: center;
         color: white;
         font-size: 2rem;
         margin-bottom: 2rem;
     }
     
-    .user-message {
+    .user-msg {
         background-color: #343541;
         color: #ececf1;
         padding: 1.5rem;
@@ -31,7 +32,7 @@ st.markdown("""
         border-left: 4px solid #19c37d;
     }
     
-    .assistant-message {
+    .bot-msg {
         background-color: #444654;
         color: #d1d5db;
         padding: 1.5rem;
@@ -41,111 +42,123 @@ st.markdown("""
     }
     
     .stTextInput > div > div > input {
-        background-color: #40414f;
-        color: white;
-        border: 1px solid #565869;
-        border-radius: 8px;
-        padding: 1rem;
+        background-color: #40414f !important;
+        color: white !important;
+        border: 1px solid #565869 !important;
+        border-radius: 8px !important;
     }
     
     .stButton > button {
-        background-color: #19c37d;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 0.5rem 2rem;
-        font-weight: 600;
+        background-color: #19c37d !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
     }
     
     .stButton > button:hover {
-        background-color: #1a7f5a;
+        background-color: #1a7f5a !important;
     }
     
     [data-testid="stSidebar"] {
         background-color: #202123;
     }
     
-    .sidebar-title {
-        color: white;
-        font-size: 1.2rem;
-        margin-bottom: 1rem;
+    .welcome {
+        text-align: center;
+        color: #8e8ea0;
+        margin-top: 3rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ====== INIT ======
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+if "msgs" not in st.session_state:
+    st.session_state.msgs = []
 
 # ====== API ======
-API_KEY = st.secrets.get("ANTHROPIC_API_KEY", "")
+API_KEY = st.secrets.get("API_KEY", "")
 
 if not API_KEY:
-    st.error("❌ Configure ANTHROPIC_API_KEY em Settings > Secrets")
+    st.error("❌ Configure API_KEY em Settings > Secrets")
     st.stop()
 
-client = Anthropic(api_key=API_KEY)
-
 # ====== FUNÇÃO CHAT ======
-def chat(mensagem):
+def responder(msg):
     try:
         # Monta histórico
-        historico = []
-        for msg in st.session_state.messages[-10:]:
-            historico.append({
-                "role": msg["role"],
-                "content": msg["content"]
+        mensagens = []
+        
+        # System prompt
+        mensagens.append({
+            "role": "system",
+            "content": "Você é Rynmaru, um assistente amigável e útil. Responda sempre em português brasileiro de forma clara e objetiva."
+        })
+        
+        # Histórico (últimas 10 mensagens)
+        for m in st.session_state.msgs[-10:]:
+            mensagens.append({
+                "role": m["role"],
+                "content": m["content"]
             })
-        historico.append({"role": "user", "content": mensagem})
+        
+        # Nova mensagem
+        mensagens.append({
+            "role": "user",
+            "content": msg
+        })
         
         # Chama API
-        response = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=4096,
-            system="Você é um assistente útil chamado Rynmaru. Responda em português de forma clara e amigável.",
-            messages=historico
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "model": "gpt-3.5-turbo",
+            "messages": mensagens,
+            "temperature": 0.7,
+            "max_tokens": 2000
+        }
+        
+        response = requests.post(
+            "https://apifreellm.com/v1/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=30
         )
         
-        return response.content[0].text
+        if response.status_code == 200:
+            result = response.json()
+            return result["choices"][0]["message"]["content"]
+        else:
+            return f"❌ Erro {response.status_code}: {response.text}"
+            
     except Exception as e:
-        return f"Erro: {str(e)}"
+        return f"❌ Erro: {str(e)}"
 
 # ====== SIDEBAR ======
 with st.sidebar:
-    st.markdown('<p class="sidebar-title">🤖 Rynmaru IA</p>', unsafe_allow_html=True)
-    
+    st.markdown("## 🤖 Rynmaru IA")
     st.markdown("---")
     
     if st.button("🗑️ Nova Conversa", use_container_width=True):
-        st.session_state.messages = []
+        st.session_state.msgs = []
         st.rerun()
     
     st.markdown("---")
-    
-    st.markdown(f"💬 **{len(st.session_state.messages)}** mensagens")
-    
+    st.write(f"💬 {len(st.session_state.msgs)} mensagens")
     st.markdown("---")
-    st.caption("Powered by Claude 3.5")
+    st.caption("API Free LLM 🆓")
 
 # ====== TÍTULO ======
-st.markdown('<h1 class="main-title">🤖 Rynmaru IA</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="title">🤖 Rynmaru IA</h1>', unsafe_allow_html=True)
 
 # ====== HISTÓRICO ======
-for msg in st.session_state.messages:
-    if msg["role"] == "user":
-        st.markdown(f'''
-        <div class="user-message">
-            <strong>👤 Você</strong><br><br>
-            {msg["content"]}
-        </div>
-        ''', unsafe_allow_html=True)
+for m in st.session_state.msgs:
+    if m["role"] == "user":
+        st.markdown(f'<div class="user-msg"><b>👤 Você</b><br><br>{m["content"]}</div>', unsafe_allow_html=True)
     else:
-        st.markdown(f'''
-        <div class="assistant-message">
-            <strong>🤖 Rynmaru</strong><br><br>
-            {msg["content"]}
-        </div>
-        ''', unsafe_allow_html=True)
+        st.markdown(f'<div class="bot-msg"><b>🤖 Rynmaru</b><br><br>{m["content"]}</div>', unsafe_allow_html=True)
 
 # ====== INPUT ======
 st.markdown("---")
@@ -153,35 +166,28 @@ st.markdown("---")
 col1, col2 = st.columns([5, 1])
 
 with col1:
-    entrada = st.text_input(
-        "Mensagem",
-        placeholder="Digite sua mensagem...",
-        label_visibility="collapsed",
-        key="input"
-    )
+    texto = st.text_input("Msg", placeholder="Digite sua mensagem...", label_visibility="collapsed", key="input")
 
 with col2:
-    enviar = st.button("Enviar", type="primary", use_container_width=True)
+    enviar = st.button("➤", type="primary", use_container_width=True)
 
 # ====== ENVIAR ======
-if enviar and entrada:
-    # Adiciona mensagem do usuário
-    st.session_state.messages.append({"role": "user", "content": entrada})
+if enviar and texto:
+    st.session_state.msgs.append({"role": "user", "content": texto})
     
-    # Gera resposta
-    with st.spinner("Pensando..."):
-        resposta = chat(entrada)
+    with st.spinner("🤔 Pensando..."):
+        resp = responder(texto)
     
-    # Adiciona resposta
-    st.session_state.messages.append({"role": "assistant", "content": resposta})
-    
+    st.session_state.msgs.append({"role": "assistant", "content": resp})
     st.rerun()
 
-# ====== FOOTER ======
-if not st.session_state.messages:
+# ====== WELCOME ======
+if not st.session_state.msgs:
     st.markdown("""
-    <div style="text-align: center; color: #8e8ea0; margin-top: 3rem;">
-        <p>👋 Olá! Sou o Rynmaru, seu assistente de IA.</p>
-        <p>Pergunte qualquer coisa!</p>
+    <div class="welcome">
+        <p>👋 Olá! Sou o <b>Rynmaru</b></p>
+        <p>Seu assistente de IA gratuito!</p>
+        <br>
+        <p>💡 Pergunte qualquer coisa...</p>
     </div>
     """, unsafe_allow_html=True)

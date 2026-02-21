@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 # ==============================
-# CONFIG
+# CONFIGURAÇÃO DA PÁGINA
 # ==============================
 
 st.set_page_config(
@@ -12,11 +12,14 @@ st.set_page_config(
 )
 
 # ==============================
-# ESTILO VISUAL (ChatGPT-like)
+# ESTILO (Visual tipo ChatGPT)
 # ==============================
 
 st.markdown("""
     <style>
+        body {
+            background-color: #0f0f0f;
+        }
         .user-msg {
             background-color: #2b2b2b;
             padding: 12px;
@@ -36,6 +39,7 @@ st.markdown("""
             font-size: 32px;
             font-weight: bold;
             margin-bottom: 20px;
+            color: white;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -58,14 +62,20 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # ==============================
-# MOSTRAR CHAT
+# MOSTRAR MENSAGENS
 # ==============================
 
 for msg in st.session_state.messages:
     if msg["role"] == "user":
-        st.markdown(f'<div class="user-msg"><b>Você:</b><br>{msg["content"]}</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="user-msg"><b>Você:</b><br>{msg["content"]}</div>',
+            unsafe_allow_html=True
+        )
     else:
-        st.markdown(f'<div class="bot-msg"><b>Rynmaru IA:</b><br>{msg["content"]}</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="bot-msg"><b>Rynmaru IA:</b><br>{msg["content"]}</div>',
+            unsafe_allow_html=True
+        )
 
 # ==============================
 # INPUT
@@ -74,6 +84,8 @@ for msg in st.session_state.messages:
 user_input = st.chat_input("Digite sua mensagem...")
 
 if user_input:
+
+    # Salva mensagem do usuário
     st.session_state.messages.append({"role": "user", "content": user_input})
 
     headers = {
@@ -82,17 +94,23 @@ if user_input:
     }
 
     payload = {
-        "model": MODEL,
-        "messages": st.session_state.messages
+        "message": user_input,
+        "model": MODEL
     }
 
-    response = requests.post(API_URL, headers=headers, json=payload)
+    try:
+        response = requests.post(API_URL, headers=headers, json=payload)
 
-    if response.status_code == 200:
-        data = response.json()
-        reply = data["choices"][0]["message"]["content"]
-    else:
-        reply = f"Erro: {response.text}"
+        if response.status_code == 200:
+            data = response.json()
+            reply = data.get("response", "Sem resposta da IA.")
+        else:
+            reply = f"Erro: {response.status_code} - {response.text}"
 
+    except Exception as e:
+        reply = f"Erro interno: {str(e)}"
+
+    # Salva resposta da IA
     st.session_state.messages.append({"role": "assistant", "content": reply})
+
     st.rerun()

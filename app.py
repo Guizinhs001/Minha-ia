@@ -1,4 +1,5 @@
 import streamlit as st
+from openai import OpenAI
 from datetime import datetime, timedelta
 import json
 import hashlib
@@ -22,7 +23,6 @@ DAILY_LIMIT_CHAT_FREE = 10
 
 # ====== GERADOR DE KEY ÚNICA ======
 def get_unique_key(prefix="key"):
-    """Gera uma key única para evitar duplicação"""
     if "key_counter" not in st.session_state:
         st.session_state.key_counter = 0
     st.session_state.key_counter += 1
@@ -115,9 +115,20 @@ st.markdown("""
         display: inline-block;
     }
     
+    .deepseek-badge {
+        background: linear-gradient(135deg, #4f46e5, #7c3aed);
+        color: white;
+        padding: 0.4rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: inline-block;
+        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
+    }
+    
     @keyframes pulse {
-        0%, 100% { transform: scale(1); box-shadow: 0 4px 20px rgba(255, 8, 68, 0.5); }
-        50% { transform: scale(1.05); box-shadow: 0 6px 30px rgba(255, 8, 68, 0.7); }
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
     }
     
     .chat-user {
@@ -158,14 +169,6 @@ st.markdown("""
         box-shadow: 0 8px 25px rgba(123, 47, 247, 0.4);
     }
     
-    .api-selector {
-        background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(123, 47, 247, 0.1));
-        border: 1px solid rgba(0, 212, 255, 0.3);
-        border-radius: 12px;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
-    
     .vip-feature {
         background: linear-gradient(135deg, rgba(247, 151, 30, 0.15), rgba(255, 210, 0, 0.15));
         border: 1px solid rgba(247, 151, 30, 0.4);
@@ -188,33 +191,6 @@ st.markdown("""
         border-radius: 15px;
         padding: 1.5rem;
         text-align: center;
-    }
-    
-    .model-badge {
-        background: linear-gradient(135deg, #00d4ff, #0099ff);
-        color: white;
-        padding: 0.3rem 0.8rem;
-        border-radius: 15px;
-        font-size: 0.8rem;
-        font-weight: 600;
-    }
-    
-    .deepseek-badge {
-        background: linear-gradient(135deg, #4f46e5, #7c3aed);
-        color: white;
-        padding: 0.3rem 0.8rem;
-        border-radius: 15px;
-        font-size: 0.8rem;
-        font-weight: 600;
-    }
-    
-    .gemini-badge {
-        background: linear-gradient(135deg, #4285f4, #34a853);
-        color: white;
-        padding: 0.3rem 0.8rem;
-        border-radius: 15px;
-        font-size: 0.8rem;
-        font-weight: 600;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -255,7 +231,6 @@ def save_session():
             "ss": st.session_state.get("saved_scripts", [])[-15:],
             "fv": st.session_state.get("favorites", [])[-10:],
             "ch": st.session_state.get("chat_history", [])[-30:],
-            "api": st.session_state.get("selected_api", "gemini"),
         }
         
         if st.session_state.get("vip_until"):
@@ -288,7 +263,6 @@ def load_session():
                 st.session_state.saved_scripts = data.get("ss", [])
                 st.session_state.favorites = data.get("fv", [])
                 st.session_state.chat_history = data.get("ch", [])
-                st.session_state.selected_api = data.get("api", "gemini")
                 
                 vip_days = data.get("v", 0)
                 if vip_days > 0:
@@ -331,7 +305,6 @@ defaults = {
     "chat_count": 0,
     "last_reset": "",
     "login_checked": False,
-    "selected_api": "gemini",
     "key_counter": 0,
 }
 
@@ -345,88 +318,43 @@ if not st.session_state.authenticated and not st.session_state.login_checked:
     if load_session():
         st.toast(f"✅ Bem-vindo de volta, {st.session_state.username}!")
 
-# ====== CONFIGURAÇÃO DAS APIs ======
-GEMINI_AVAILABLE = False
-DEEPSEEK_AVAILABLE = False
-
-# Verificar Gemini
+# ====== CONFIGURAÇÃO DEEPSEEK ======
 try:
-    import google.generativeai as genai
-    GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
-    if GEMINI_API_KEY:
-        genai.configure(api_key=GEMINI_API_KEY)
-        GEMINI_AVAILABLE = True
+    DEEPSEEK_API_KEY = st.secrets["DEEPSEEK_API_KEY"]
+    MASTER_CODE = st.secrets.get("MASTER_CODE", "GuizinhsDono")
 except:
-    pass
-
-# Verificar DeepSeek
-try:
-    from openai import OpenAI
-    DEEPSEEK_API_KEY = st.secrets.get("DEEPSEEK_API_KEY", "")
-    if DEEPSEEK_API_KEY:
-        DEEPSEEK_AVAILABLE = True
-except:
-    pass
-
-# Master Code
-MASTER_CODE = st.secrets.get("MASTER_CODE", "GuizinhsDono")
-
-# Verificar se alguma API está disponível
-if not GEMINI_AVAILABLE and not DEEPSEEK_AVAILABLE:
-    st.error("❌ Nenhuma API configurada!")
+    st.error("❌ Configure a API do DeepSeek!")
     st.code("""
 # Adicione em Settings > Secrets:
 
-# Para Gemini:
-GEMINI_API_KEY = "sua_chave_gemini"
-
-# Para DeepSeek:
 DEEPSEEK_API_KEY = "sua_chave_deepseek"
-
-# Código Master:
-MASTER_CODE = "seu_codigo"
+MASTER_CODE = "seu_codigo_master"
     """)
-    st.info("🔗 Obtenha sua chave DeepSeek em: https://platform.deepseek.com/")
-    st.info("🔗 Obtenha sua chave Gemini em: https://makersuite.google.com/app/apikey")
+    st.info("🔗 Obtenha sua chave em: https://platform.deepseek.com/")
     st.stop()
 
-# ====== FUNÇÕES DE IA ======
-def get_available_apis():
-    """Retorna lista de APIs disponíveis"""
-    apis = []
-    if GEMINI_AVAILABLE:
-        apis.append(("gemini", "🌟 Gemini (Google)"))
-    if DEEPSEEK_AVAILABLE:
-        apis.append(("deepseek", "🧠 DeepSeek"))
-    return apis
+# Inicializar cliente DeepSeek
+client = OpenAI(
+    api_key=DEEPSEEK_API_KEY,
+    base_url="https://api.deepseek.com"
+)
 
-def generate_with_gemini(prompt):
-    """Gera texto com Gemini"""
+# ====== FUNÇÃO DE GERAÇÃO ======
+def generate_with_deepseek(prompt, system_prompt=None):
+    """Gera texto usando DeepSeek"""
     try:
-        models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        if not models:
-            return None, "Nenhum modelo Gemini disponível"
+        messages = []
         
-        model = genai.GenerativeModel(models[0])
-        response = model.generate_content(prompt)
-        return response.text, None
-    except Exception as e:
-        return None, str(e)
-
-def generate_with_deepseek(prompt):
-    """Gera texto com DeepSeek"""
-    try:
-        client = OpenAI(
-            api_key=DEEPSEEK_API_KEY,
-            base_url="https://api.deepseek.com"
-        )
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        else:
+            messages.append({"role": "system", "content": "Você é um programador expert. Responda em português."})
+        
+        messages.append({"role": "user", "content": prompt})
         
         response = client.chat.completions.create(
             model="deepseek-chat",
-            messages=[
-                {"role": "system", "content": "Você é um programador expert. Responda em português."},
-                {"role": "user", "content": prompt}
-            ],
+            messages=messages,
             max_tokens=4000,
             temperature=0.7
         )
@@ -434,19 +362,6 @@ def generate_with_deepseek(prompt):
         return response.choices[0].message.content, None
     except Exception as e:
         return None, str(e)
-
-def generate_code(prompt, api="gemini"):
-    """Gera código usando a API selecionada"""
-    if api == "deepseek" and DEEPSEEK_AVAILABLE:
-        return generate_with_deepseek(prompt)
-    elif api == "gemini" and GEMINI_AVAILABLE:
-        return generate_with_gemini(prompt)
-    elif DEEPSEEK_AVAILABLE:
-        return generate_with_deepseek(prompt)
-    elif GEMINI_AVAILABLE:
-        return generate_with_gemini(prompt)
-    else:
-        return None, "Nenhuma API disponível"
 
 # ====== FUNÇÕES AUXILIARES ======
 def is_vip():
@@ -511,7 +426,7 @@ TEMPLATES = {
         #ui { position: fixed; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; color: #fff; font: bold 22px Arial; text-shadow: 0 0 10px #7b2ff7; z-index: 100; }
         #gameOver { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; color: #fff; z-index: 200; }
         #gameOver.show { display: flex; }
-        #gameOver h1 { font-size: 42px; background: linear-gradient(135deg, #00d4ff, #7b2ff7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; }
+        #gameOver h1 { font-size: 42px; background: linear-gradient(135deg, #00d4ff, #7b2ff7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         #gameOver button { margin-top: 30px; padding: 18px 50px; font-size: 20px; background: linear-gradient(135deg, #7b2ff7, #f107a3); border: none; border-radius: 30px; color: #fff; font-weight: bold; }
     </style>
 </head>
@@ -523,7 +438,7 @@ TEMPLATES = {
     </div>
     <div id="gameOver">
         <h1>🎮 Fim de Jogo!</h1>
-        <p style="font-size:24px;">Pontos: <span id="finalScore">0</span></p>
+        <p style="font-size:24px;margin-top:20px;">Pontos: <span id="finalScore">0</span></p>
         <button onclick="startGame()">🔄 Jogar Novamente</button>
     </div>
     <script>
@@ -597,13 +512,11 @@ TEMPLATES = {
             ctx.fillStyle = '#0a0a1a';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Grid
             ctx.strokeStyle = 'rgba(123, 47, 247, 0.1)';
             for (let x = 0; x < canvas.width; x += 50) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
             }
             
-            // Coins
             const time = Date.now() / 200;
             coins.forEach(c => {
                 const wobble = Math.sin(time + c.x) * 4;
@@ -616,7 +529,6 @@ TEMPLATES = {
                 ctx.shadowBlur = 0;
             });
             
-            // Particles
             particles.forEach(p => {
                 ctx.globalAlpha = p.life / 25;
                 ctx.fillStyle = `hsl(${p.hue}, 100%, 60%)`;
@@ -626,7 +538,6 @@ TEMPLATES = {
             });
             ctx.globalAlpha = 1;
             
-            // Player
             const gradient = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, player.size/2);
             gradient.addColorStop(0, '#00d4ff');
             gradient.addColorStop(1, '#7b2ff7');
@@ -638,7 +549,6 @@ TEMPLATES = {
             ctx.fill();
             ctx.shadowBlur = 0;
             
-            // Eyes
             ctx.fillStyle = '#fff';
             ctx.beginPath();
             ctx.arc(player.x - 12, player.y - 5, 10, 0, Math.PI * 2);
@@ -690,7 +600,7 @@ TEMPLATES = {
         #overlay { position: fixed; inset: 0; background: rgba(10,10,26,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; z-index: 100; }
         #overlay.hidden { display: none; }
         #overlay h1 { font-size: 52px; background: linear-gradient(135deg, #0ff, #f0f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        #overlay button { margin-top: 40px; padding: 20px 60px; font-size: 22px; background: linear-gradient(135deg, #0ff, #7b2ff7); border: none; border-radius: 30px; color: #fff; font-weight: bold; box-shadow: 0 0 30px rgba(0,255,255,0.5); }
+        #overlay button { margin-top: 40px; padding: 20px 60px; font-size: 22px; background: linear-gradient(135deg, #0ff, #7b2ff7); border: none; border-radius: 30px; color: #fff; font-weight: bold; }
         .hint { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.6); font: 18px Arial; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0.3; } }
     </style>
@@ -732,13 +642,7 @@ TEMPLATES = {
         
         function addParticle(x, y, hue) {
             for (let i = 0; i < 8; i++) {
-                particles.push({
-                    x, y,
-                    vx: (Math.random() - 0.5) * 8,
-                    vy: Math.random() * -10,
-                    life: 30,
-                    hue
-                });
+                particles.push({ x, y, vx: (Math.random() - 0.5) * 8, vy: Math.random() * -10, life: 30, hue });
             }
         }
         
@@ -766,30 +670,23 @@ TEMPLATES = {
         
         function gameOver() {
             playing = false;
-            if (score > best) {
-                best = score;
-                localStorage.setItem('neonBest', best);
-                document.getElementById('best').textContent = best;
-            }
+            if (score > best) { best = score; localStorage.setItem('neonBest', best); document.getElementById('best').textContent = best; }
             document.getElementById('title').textContent = '💀 GAME OVER';
-            document.getElementById('text').innerHTML = `Distância: ${score}m<br>Recorde: ${best}m`;
+            document.getElementById('text').innerHTML = 'Distância: ' + score + 'm<br>Recorde: ' + best + 'm';
             document.getElementById('overlay').classList.remove('hidden');
             document.getElementById('hint').style.display = 'none';
         }
         
         function update() {
             if (!playing) return;
-            frame++;
-            bgHue = (bgHue + 0.2) % 360;
+            frame++; bgHue = (bgHue + 0.2) % 360;
             
             player.vy += 1;
             player.y += player.vy;
             
             if (player.y + player.h >= ground) {
-                player.y = ground - player.h;
-                player.vy = 0;
-                player.jumping = false;
-                player.doubleJump = false;
+                player.y = ground - player.h; player.vy = 0;
+                player.jumping = false; player.doubleJump = false;
             }
             
             if (frame % Math.max(50, 80 - score/3) === 0) addObstacle();
@@ -797,18 +694,14 @@ TEMPLATES = {
             for (let i = obstacles.length - 1; i >= 0; i--) {
                 obstacles[i].x -= speed;
                 
-                if (player.x < obstacles[i].x + obstacles[i].w &&
-                    player.x + player.w > obstacles[i].x &&
-                    player.y < obstacles[i].y + obstacles[i].h &&
-                    player.y + player.h > obstacles[i].y) {
+                if (player.x < obstacles[i].x + obstacles[i].w && player.x + player.w > obstacles[i].x &&
+                    player.y < obstacles[i].y + obstacles[i].h && player.y + player.h > obstacles[i].y) {
                     addParticle(player.x + player.w/2, player.y + player.h/2, 0);
-                    gameOver();
-                    return;
+                    gameOver(); return;
                 }
                 
                 if (obstacles[i].x + obstacles[i].w < 0) {
-                    obstacles.splice(i, 1);
-                    score++;
+                    obstacles.splice(i, 1); score++;
                     document.getElementById('score').textContent = score;
                     if (score % 10 === 0) speed += 0.4;
                 }
@@ -824,39 +717,27 @@ TEMPLATES = {
         }
         
         function draw() {
-            // Background
             ctx.fillStyle = '#0a0a1a';
             ctx.fillRect(0, 0, c.width, c.height);
             
-            // Neon grid
-            ctx.strokeStyle = `hsla(${bgHue}, 100%, 50%, 0.1)`;
-            for (let x = 0; x < c.width; x += 80) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, c.height); ctx.stroke();
-            }
-            for (let y = 0; y < c.height; y += 80) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(c.width, y); ctx.stroke();
-            }
+            ctx.strokeStyle = 'hsla(' + bgHue + ', 100%, 50%, 0.1)';
+            for (let x = 0; x < c.width; x += 80) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, c.height); ctx.stroke(); }
             
-            // Ground
             ctx.fillStyle = '#1a1a2e';
             ctx.fillRect(0, ground, c.width, c.height - ground);
-            ctx.fillStyle = `hsl(${bgHue}, 100%, 50%)`;
-            ctx.shadowColor = `hsl(${bgHue}, 100%, 50%)`;
+            ctx.fillStyle = 'hsl(' + bgHue + ', 100%, 50%)';
+            ctx.shadowColor = 'hsl(' + bgHue + ', 100%, 50%)';
             ctx.shadowBlur = 20;
             ctx.fillRect(0, ground, c.width, 4);
             ctx.shadowBlur = 0;
             
-            // Particles
             particles.forEach(p => {
                 ctx.globalAlpha = p.life / 30;
-                ctx.fillStyle = `hsl(${p.hue}, 100%, 60%)`;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.fillStyle = 'hsl(' + p.hue + ', 100%, 60%)';
+                ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill();
             });
             ctx.globalAlpha = 1;
             
-            // Player
             const gradient = ctx.createLinearGradient(player.x, player.y, player.x + player.w, player.y + player.h);
             gradient.addColorStop(0, '#0ff');
             gradient.addColorStop(1, '#f0f');
@@ -866,7 +747,6 @@ TEMPLATES = {
             ctx.fillRect(player.x, player.y, player.w, player.h);
             ctx.shadowBlur = 0;
             
-            // Player eyes
             ctx.fillStyle = '#fff';
             ctx.fillRect(player.x + 12, player.y + 15, 10, 12);
             ctx.fillRect(player.x + 28, player.y + 15, 10, 12);
@@ -874,28 +754,23 @@ TEMPLATES = {
             ctx.fillRect(player.x + 17, player.y + 20, 4, 5);
             ctx.fillRect(player.x + 33, player.y + 20, 4, 5);
             
-            // Jump trail
             if (player.jumping) {
                 ctx.globalAlpha = 0.3;
                 for (let i = 1; i <= 4; i++) {
-                    ctx.fillStyle = `hsla(180, 100%, 50%, ${0.3 - i * 0.06})`;
+                    ctx.fillStyle = 'hsla(180, 100%, 50%, ' + (0.3 - i * 0.06) + ')';
                     ctx.fillRect(player.x - i * 12, player.y + i * 6, player.w, player.h);
                 }
                 ctx.globalAlpha = 1;
             }
             
-            // Double jump indicator
             if (!player.doubleJump && player.jumping) {
                 ctx.fillStyle = 'rgba(255, 255, 0, 0.6)';
-                ctx.beginPath();
-                ctx.arc(player.x + player.w/2, player.y - 15, 10, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(player.x + player.w/2, player.y - 15, 10, 0, Math.PI * 2); ctx.fill();
             }
             
-            // Obstacles
             obstacles.forEach(o => {
-                ctx.fillStyle = `hsl(${o.hue}, 100%, 50%)`;
-                ctx.shadowColor = `hsl(${o.hue}, 100%, 50%)`;
+                ctx.fillStyle = 'hsl(' + o.hue + ', 100%, 50%)';
+                ctx.shadowColor = 'hsl(' + o.hue + ', 100%, 50%)';
                 ctx.shadowBlur = 15;
                 ctx.fillRect(o.x, o.y, o.w, o.h);
             });
@@ -930,13 +805,11 @@ gg.toast("🎮 Rynmaru Script carregado!")
 local config = { version = "2.0", safeMode = true }
 local running = true
 
--- Utilitários
 local function toast(msg) gg.toast(msg) end
 local function alert(msg, title) gg.alert(msg, "OK", nil, title or "Info") end
 local function confirm(msg) return gg.alert(msg, "Sim", "Não") == 1 end
 local function input(prompts, defaults, types) return gg.prompt(prompts, defaults, types) end
 
--- Funções de memória
 local function searchValue(value, dataType, ranges)
     dataType = dataType or gg.TYPE_DWORD
     ranges = ranges or gg.REGION_ANONYMOUS
@@ -959,7 +832,6 @@ local function editResults(newValue, maxResults)
     return true
 end
 
--- Hacks
 local function hackGenerico()
     local tipos = {"💰 Dinheiro", "💎 Gemas", "⚡ Energia", "❤️ Vida", "⚔️ Ataque", "🛡️ Defesa"}
     local choice = gg.choice(tipos, nil, "Tipo de Valor")
@@ -1059,7 +931,6 @@ local function buscaAvancada()
     end
 end
 
--- Menu Principal
 local function mainMenu()
     local menu = gg.choice({
         "💰 Hack Genérico",
@@ -1104,8 +975,7 @@ os.exit()"""
     
     "🎮 Godot 4.x": {
         "Player 2D Completo": """extends CharacterBody2D
-## Player 2D - Rynmaru Engine
-## Godot 4.x
+## Player 2D - Rynmaru Engine - Godot 4.x
 
 @export_group("Movimento")
 @export var speed: float = 320.0
@@ -1116,7 +986,6 @@ os.exit()"""
 @export var jump_velocity: float = -480.0
 @export var max_jumps: int = 2
 @export var coyote_time: float = 0.12
-@export var jump_buffer: float = 0.1
 
 @export_group("Dash")
 @export var dash_speed: float = 650.0
@@ -1126,7 +995,6 @@ os.exit()"""
 var gravity = ProjectSettings.get_setting("physics/2d/default_gravity")
 var jumps_left: int = 0
 var coyote_timer: float = 0.0
-var buffer_timer: float = 0.0
 var is_dashing: bool = false
 var dash_timer: float = 0.0
 var dash_cd_timer: float = 0.0
@@ -1134,11 +1002,6 @@ var dash_dir: Vector2 = Vector2.ZERO
 var facing: int = 1
 
 @onready var sprite = $AnimatedSprite2D
-@onready var particles = $Particles
-
-signal jumped
-signal dashed
-signal landed
 
 func _ready():
     jumps_left = max_jumps
@@ -1164,11 +1027,6 @@ func update_timers(delta):
     else:
         coyote_timer = max(0, coyote_timer - delta)
     
-    if Input.is_action_just_pressed("jump"):
-        buffer_timer = jump_buffer
-    else:
-        buffer_timer = max(0, buffer_timer - delta)
-    
     dash_cd_timer = max(0, dash_cd_timer - delta)
 
 func apply_gravity(delta):
@@ -1177,15 +1035,11 @@ func apply_gravity(delta):
 
 func handle_jump():
     var can_jump = is_on_floor() or coyote_timer > 0 or jumps_left > 0
-    var wants_jump = Input.is_action_just_pressed("jump") or buffer_timer > 0
     
-    if wants_jump and can_jump:
+    if Input.is_action_just_pressed("jump") and can_jump:
         velocity.y = jump_velocity
         jumps_left -= 1
         coyote_timer = 0
-        buffer_timer = 0
-        emit_signal("jumped")
-        if particles: particles.emitting = true
     
     if Input.is_action_just_released("jump") and velocity.y < 0:
         velocity.y *= 0.5
@@ -1202,18 +1056,9 @@ func handle_movement(delta):
 
 func check_dash():
     if Input.is_action_just_pressed("dash") and dash_cd_timer <= 0:
-        start_dash()
-
-func start_dash():
-    is_dashing = true
-    dash_timer = dash_duration
-    dash_dir = Vector2(facing, 0)
-    
-    var input_dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
-    if input_dir != Vector2.ZERO:
-        dash_dir = input_dir.normalized()
-    
-    emit_signal("dashed")
+        is_dashing = true
+        dash_timer = dash_duration
+        dash_dir = Vector2(facing, 0)
 
 func process_dash(delta):
     velocity = dash_dir * dash_speed
@@ -1232,53 +1077,22 @@ func update_animation():
         sprite.play("run")
     else:
         sprite.play("idle")
-
-func take_damage(amount: int, knockback: Vector2 = Vector2.ZERO):
-    velocity = knockback
-    sprite.play("hurt")
 """
     },
     
     "🤖 Discord Bot": {
-        "Bot Completo": """import discord
+        "Bot Básico": """import discord
 from discord import app_commands
 from discord.ext import commands
-from datetime import datetime
-import json
-import os
 
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
-
-# Database
-DB_FILE = "rynmaru_db.json"
-
-def load_db():
-    if os.path.exists(DB_FILE):
-        with open(DB_FILE, 'r') as f:
-            return json.load(f)
-    return {"users": {}}
-
-def save_db(data):
-    with open(DB_FILE, 'w') as f:
-        json.dump(data, f, indent=2)
-
-db = load_db()
-
-def get_user(user_id):
-    uid = str(user_id)
-    if uid not in db["users"]:
-        db["users"][uid] = {"balance": 0, "daily": None, "xp": 0, "level": 1}
-        save_db(db)
-    return db["users"][uid]
 
 @bot.event
 async def on_ready():
     print(f"✅ {bot.user} online!")
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="/help"))
     try:
         synced = await bot.tree.sync()
         print(f"✅ {len(synced)} comandos sincronizados")
@@ -1309,71 +1123,7 @@ async def serverinfo(interaction: discord.Interaction):
     embed.add_field(name="👑 Dono", value=g.owner.mention if g.owner else "N/A")
     embed.add_field(name="👥 Membros", value=g.member_count)
     embed.add_field(name="💬 Canais", value=len(g.channels))
-    embed.add_field(name="🎭 Cargos", value=len(g.roles))
-    embed.add_field(name="📅 Criado", value=g.created_at.strftime("%d/%m/%Y"))
     await interaction.response.send_message(embed=embed)
-
-@bot.tree.command(name="balance", description="Ver saldo")
-async def balance(interaction: discord.Interaction):
-    data = get_user(interaction.user.id)
-    embed = discord.Embed(
-        title="💰 Seu Saldo",
-        description=f"**{data['balance']:,}** moedas\\nNível: **{data['level']}** | XP: **{data['xp']}**",
-        color=0xffd700
-    )
-    await interaction.response.send_message(embed=embed)
-
-@bot.tree.command(name="daily", description="Recompensa diária")
-async def daily(interaction: discord.Interaction):
-    data = get_user(interaction.user.id)
-    today = datetime.now().strftime("%Y-%m-%d")
-    
-    if data.get("daily") == today:
-        embed = discord.Embed(title="⏰ Já Resgatado!", description="Volte amanhã!", color=0xff4444)
-    else:
-        reward = 100 + (data['level'] * 10)
-        data["balance"] += reward
-        data["daily"] = today
-        data["xp"] += 25
-        
-        if data["xp"] >= data["level"] * 100:
-            data["level"] += 1
-            data["xp"] = 0
-        
-        save_db(db)
-        embed = discord.Embed(
-            title="🎁 Recompensa Diária!",
-            description=f"Você ganhou **{reward}** moedas!\\nSaldo: **{data['balance']:,}**",
-            color=0x00ff88
-        )
-    
-    await interaction.response.send_message(embed=embed)
-
-@bot.tree.command(name="coinflip", description="Cara ou coroa")
-async def coinflip(interaction: discord.Interaction, aposta: int = 0):
-    import random
-    data = get_user(interaction.user.id)
-    
-    if aposta > 0:
-        if data["balance"] < aposta:
-            await interaction.response.send_message("❌ Saldo insuficiente!", ephemeral=True)
-            return
-        
-        won = random.choice([True, False])
-        result = "Cara" if random.choice([True, False]) else "Coroa"
-        
-        if won:
-            data["balance"] += aposta
-            msg = f"🎉 Você ganhou! +{aposta} moedas"
-        else:
-            data["balance"] -= aposta
-            msg = f"😢 Você perdeu! -{aposta} moedas"
-        
-        save_db(db)
-        await interaction.response.send_message(f"🪙 **{result}**\\n{msg}\\nSaldo: {data['balance']:,}")
-    else:
-        result = random.choice(["🪙 Cara!", "🎭 Coroa!"])
-        await interaction.response.send_message(result)
 
 # bot.run("SEU_TOKEN")
 """
@@ -1413,7 +1163,6 @@ class RynmaruScraper:
             'title': soup.title.string.strip() if soup.title else '',
             'headings': [h.text.strip() for h in soup.find_all(['h1','h2','h3'])[:10]],
             'links': [a.get('href') for a in soup.find_all('a', href=True)[:20]],
-            'images': [img.get('src') for img in soup.find_all('img', src=True)[:10]],
             'timestamp': datetime.now().isoformat()
         }
     
@@ -1427,7 +1176,6 @@ if __name__ == "__main__":
     result = scraper.scrape("https://example.com")
     if result:
         print(f"Título: {result['title']}")
-        print(f"Links: {len(result['links'])}")
         scraper.data.append(result)
         scraper.save_json()
 """,
@@ -1435,7 +1183,6 @@ if __name__ == "__main__":
         "API Flask": """from flask import Flask, jsonify, request
 from flask_cors import CORS
 from datetime import datetime
-import json
 
 app = Flask(__name__)
 CORS(app)
@@ -1459,19 +1206,13 @@ def create_user():
     user = {
         "id": len(db["users"]) + 1,
         "name": data["name"],
-        "email": data.get("email", ""),
         "created": datetime.now().isoformat()
     }
     db["users"].append(user)
     return jsonify({"data": user}), 201
 
-@app.route('/users/<int:id>', methods=['DELETE'])
-def delete_user(id):
-    db["users"] = [u for u in db["users"] if u["id"] != id]
-    return jsonify({"message": "Deletado"})
-
 if __name__ == '__main__':
-    print("🚀 Rynmaru API em http://localhost:5000")
+    print("🚀 API em http://localhost:5000")
     app.run(debug=True)
 """
     }
@@ -1486,15 +1227,7 @@ if not st.session_state.authenticated:
     </div>
     """, unsafe_allow_html=True)
     
-    # APIs disponíveis
-    apis = get_available_apis()
-    api_info = []
-    if GEMINI_AVAILABLE:
-        api_info.append("✅ Gemini")
-    if DEEPSEEK_AVAILABLE:
-        api_info.append("✅ DeepSeek")
-    
-    st.success(f"🤖 APIs disponíveis: {' | '.join(api_info)}")
+    st.markdown('<span class="deepseek-badge">🧠 Powered by DeepSeek</span>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
@@ -1559,7 +1292,6 @@ if not st.session_state.authenticated:
                 <li>✅ 10 mensagens chat/dia</li>
                 <li>✅ Templates básicos</li>
                 <li>❌ Salvar scripts</li>
-                <li>❌ Escolher API</li>
             </ul>
         </div>
         """, unsafe_allow_html=True)
@@ -1571,7 +1303,6 @@ if not st.session_state.authenticated:
                 <li>✅ Gerações ILIMITADAS</li>
                 <li>✅ Chat ILIMITADO</li>
                 <li>✅ TODOS os templates</li>
-                <li>✅ Escolher API (Gemini/DeepSeek)</li>
                 <li>✅ Salvar 15 scripts</li>
                 <li>✅ 10 favoritos</li>
                 <li>✅ Histórico na nuvem</li>
@@ -1599,27 +1330,7 @@ with st.sidebar:
         st.markdown('<span class="free-badge">🆓 Gratuito</span>', unsafe_allow_html=True)
     
     st.markdown("---")
-    
-    # Seletor de API (VIP only)
-    if is_vip():
-        st.markdown("### 🤖 Escolher IA")
-        apis = get_available_apis()
-        api_options = {name: key for key, name in apis}
-        selected = st.radio(
-            "Modelo:",
-            options=[name for _, name in apis],
-            key=get_unique_key("api_select"),
-            horizontal=True
-        )
-        st.session_state.selected_api = api_options.get(selected, "gemini")
-        
-        # Badge da API
-        if st.session_state.selected_api == "deepseek":
-            st.markdown('<span class="deepseek-badge">🧠 DeepSeek Ativo</span>', unsafe_allow_html=True)
-        else:
-            st.markdown('<span class="gemini-badge">🌟 Gemini Ativo</span>', unsafe_allow_html=True)
-    else:
-        st.info("🔒 Escolha de API: VIP apenas")
+    st.markdown('<span class="deepseek-badge">🧠 DeepSeek Ativo</span>', unsafe_allow_html=True)
     
     st.markdown("---")
     
@@ -1674,12 +1385,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Mostrar API ativa
-current_api = st.session_state.get("selected_api", "gemini")
-if current_api == "deepseek":
-    st.markdown('<span class="deepseek-badge">🧠 Usando DeepSeek</span>', unsafe_allow_html=True)
-else:
-    st.markdown('<span class="gemini-badge">🌟 Usando Gemini</span>', unsafe_allow_html=True)
+st.markdown('<span class="deepseek-badge">🧠 Powered by DeepSeek</span>', unsafe_allow_html=True)
 
 # Tabs
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["🤖 Gerar", "💬 Chat", "💻 Editor", "📚 Biblioteca", "📊 Stats"])
@@ -1693,7 +1399,7 @@ with tab1:
     with col1:
         prompt = st.text_area(
             "📝 Descrição:",
-            placeholder="Ex: Crie um jogo de plataforma 2D em HTML5 para Android...",
+            placeholder="Ex: Crie um jogo de plataforma 2D em HTML5 para Android com controles touch...",
             height=120,
             key=get_unique_key("prompt")
         )
@@ -1722,7 +1428,7 @@ with tab1:
         if not prompt:
             st.error("❌ Descreva o que quer criar!")
         else:
-            with st.spinner(f"🔮 Gerando com {current_api.upper()}..."):
+            with st.spinner("🧠 DeepSeek gerando código..."):
                 system_prompt = f"""Você é um programador expert em {tipo}. 
 Crie código COMPLETO e 100% FUNCIONAL.
 
@@ -1736,9 +1442,9 @@ REGRAS:
 4. Se for jogo mobile HTML5: use touch events, viewport correto, meta tags PWA
 5. Se for Game Guardian: use gg.* API corretamente
 
-IMPORTANTE: Retorne APENAS o código, sem markdown."""
+IMPORTANTE: Retorne APENAS o código, sem markdown, sem explicações."""
 
-                result, error = generate_code(system_prompt, current_api)
+                result, error = generate_with_deepseek(prompt, system_prompt)
                 
                 if error:
                     st.error(f"❌ Erro: {error}")
@@ -1825,7 +1531,7 @@ IMPORTANTE: Retorne APENAS o código, sem markdown."""
 
 # ====== TAB CHAT ======
 with tab2:
-    st.markdown("### 💬 Chat com IA")
+    st.markdown("### 💬 Chat com DeepSeek")
     
     for idx, msg in enumerate(st.session_state.chat_history):
         if msg["role"] == "user":
@@ -1841,7 +1547,7 @@ with tab2:
         else:
             st.markdown(f"""
             <div class="chat-assistant">
-                <strong>🤖 IA:</strong><br>{msg["content"][:2000]}
+                <strong>🧠 DeepSeek:</strong><br>{msg["content"][:2000]}
             </div>
             """, unsafe_allow_html=True)
             col1, col2 = st.columns([1, 10])
@@ -1865,21 +1571,22 @@ with tab2:
     if st.button("📤 Enviar", disabled=not can_ch or not user_input, key=get_unique_key("btn_send")):
         st.session_state.chat_history.append({"role": "user", "content": user_input})
         
-        with st.spinner("🤔 Pensando..."):
+        with st.spinner("🧠 DeepSeek pensando..."):
             context = "\n".join([
-                f"{'Usuário' if m['role']=='user' else 'IA'}: {m['content'][:500]}"
+                f"{'Usuário' if m['role']=='user' else 'Assistente'}: {m['content'][:500]}"
                 for m in st.session_state.chat_history[-8:]
             ])
             
-            prompt = f"""Você é um assistente de programação expert e amigável.
+            system = """Você é um assistente de programação expert e amigável chamado Rynmaru.
 Responda em português de forma clara e útil.
+Se pedirem código, forneça código completo e funcional."""
 
-Conversa:
+            prompt = f"""Conversa anterior:
 {context}
 
-Responda à última mensagem:"""
+Responda à última mensagem do usuário."""
 
-            result, error = generate_code(prompt, current_api)
+            result, error = generate_with_deepseek(prompt, system)
             
             if error:
                 st.error(f"Erro: {error}")
@@ -2015,4 +1722,4 @@ with tab5:
 
 # Rodapé
 st.markdown("---")
-st.caption("🎮 Rynmaru IA v1.0 | Criado por Guizinhs | Gemini + DeepSeek")
+st.caption("🎮 Rynmaru IA v1.0 | Criado por Guizinhs | Powered by DeepSeek 🧠")

@@ -1,7 +1,5 @@
 import streamlit as st
 from openai import OpenAI
-from datetime import datetime, timedelta
-import random
 import re
 
 # ====== CONFIGURAÇÃO ======
@@ -11,7 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ====== CSS SIMPLES ======
+# ====== CSS ======
 st.markdown("""
 <style>
     .stApp {
@@ -24,14 +22,8 @@ st.markdown("""
         text-align: center;
         margin-bottom: 2rem;
     }
-    .header-box h1 {
-        color: white;
-        margin: 0;
-    }
-    .header-box p {
-        color: rgba(255,255,255,0.9);
-        margin: 0.5rem 0 0 0;
-    }
+    .header-box h1 { color: white; margin: 0; }
+    .header-box p { color: rgba(255,255,255,0.9); margin: 0.5rem 0 0 0; }
     .chat-user {
         background: linear-gradient(135deg, #7b2ff7, #f107a3);
         color: white;
@@ -49,6 +41,20 @@ st.markdown("""
         margin-right: 20%;
         border: 1px solid #7b2ff7;
     }
+    .error-box {
+        background: #ff4444;
+        color: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+    }
+    .success-box {
+        background: #00c853;
+        color: white;
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -57,54 +63,102 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "current_code" not in st.session_state:
     st.session_state.current_code = ""
-if "api_ok" not in st.session_state:
-    st.session_state.api_ok = False
+if "api_testada" not in st.session_state:
+    st.session_state.api_testada = False
+if "api_funciona" not in st.session_state:
+    st.session_state.api_funciona = False
 
-# ====== API DEEPSEEK ======
+# ====== HEADER ======
+st.markdown("""
+<div class="header-box">
+    <h1>🎮 RYNMARU IA</h1>
+    <p>Gerador de Scripts com DeepSeek</p>
+</div>
+""", unsafe_allow_html=True)
+
+# ====== VERIFICAR API ======
 DEEPSEEK_API_KEY = st.secrets.get("DEEPSEEK_API_KEY", "")
 
-# Verificar API
 if not DEEPSEEK_API_KEY:
+    st.error("❌ Chave API não configurada!")
     st.markdown("""
-    <div class="header-box">
-        <h1>🎮 RYNMARU IA</h1>
-        <p>Configuração Necessária</p>
-    </div>
-    """, unsafe_allow_html=True)
+    ### 📋 Como configurar:
     
-    st.error("❌ API do DeepSeek não configurada!")
-    
-    st.markdown("### 📋 Siga estes passos:")
-    
-    st.markdown("""
-    **1.** Obtenha sua chave em: [platform.deepseek.com](https://platform.deepseek.com/)
-    
-    **2.** No Streamlit Cloud, clique em **⚙️ Settings** (canto inferior esquerdo)
-    
-    **3.** Vá em **Secrets**
-    
-    **4.** Cole exatamente isso:
+    1. Acesse [platform.deepseek.com](https://platform.deepseek.com/)
+    2. Crie uma conta e vá em **API Keys**
+    3. Crie uma nova chave
+    4. No Streamlit, vá em **Settings > Secrets**
+    5. Adicione:
+    ```
+    DEEPSEEK_API_KEY = "sk-sua-chave-aqui"
+    ```
+    6. Clique Save e Reboot o app
     """)
-    
-    st.code('DEEPSEEK_API_KEY = "sk-sua-chave-aqui"', language="toml")
-    
-    st.markdown("**5.** Clique **Save** e depois **Reboot app**")
-    
     st.stop()
 
-# Criar cliente
-try:
-    client = OpenAI(
-        api_key=DEEPSEEK_API_KEY,
-        base_url="https://api.deepseek.com"
-    )
-    st.session_state.api_ok = True
-except Exception as e:
-    st.error(f"❌ Erro ao criar cliente: {e}")
-    st.stop()
+# ====== CRIAR CLIENTE ======
+client = OpenAI(
+    api_key=DEEPSEEK_API_KEY,
+    base_url="https://api.deepseek.com"
+)
 
-# ====== FUNÇÃO PRINCIPAL ======
-def gerar_com_deepseek(prompt, sistema="Você é um programador expert. Responda em português."):
+# ====== FUNÇÃO PARA TESTAR API ======
+def testar_api():
+    try:
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[{"role": "user", "content": "Diga apenas: OK"}],
+            max_tokens=10
+        )
+        return True, "Conectado!"
+    except Exception as e:
+        erro = str(e)
+        if "401" in erro or "invalid" in erro.lower() or "authentication" in erro.lower():
+            return False, "❌ CHAVE API INVÁLIDA! Crie uma nova chave no site do DeepSeek."
+        elif "402" in erro or "insufficient" in erro.lower() or "balance" in erro.lower():
+            return False, "❌ SEM CRÉDITOS! Adicione saldo na sua conta DeepSeek."
+        elif "429" in erro:
+            return False, "❌ LIMITE DE REQUISIÇÕES! Aguarde um momento."
+        else:
+            return False, f"❌ Erro: {erro}"
+
+# ====== TESTAR CONEXÃO ======
+with st.sidebar:
+    st.markdown("## 🎮 Rynmaru IA")
+    st.markdown("---")
+    
+    if st.button("🔄 Testar API", use_container_width=True):
+        with st.spinner("Testando..."):
+            funciona, msg = testar_api()
+            st.session_state.api_testada = True
+            st.session_state.api_funciona = funciona
+            if funciona:
+                st.success("✅ " + msg)
+            else:
+                st.error(msg)
+    
+    if st.session_state.api_testada:
+        if st.session_state.api_funciona:
+            st.success("🟢 API OK")
+        else:
+            st.error("🔴 API com problema")
+    
+    st.markdown("---")
+    st.markdown("### 📊 Status")
+    st.write(f"💬 Mensagens: {len(st.session_state.messages)}")
+    st.write(f"📄 Código: {'✅' if st.session_state.current_code else '❌'}")
+    
+    st.markdown("---")
+    if st.button("🗑️ Limpar Tudo", use_container_width=True):
+        st.session_state.messages = []
+        st.session_state.current_code = ""
+        st.rerun()
+    
+    st.markdown("---")
+    st.caption("DeepSeek AI 🧠")
+
+# ====== FUNÇÃO GERAR ======
+def gerar(prompt, sistema="Você é um programador expert. Responda em português."):
     try:
         response = client.chat.completions.create(
             model="deepseek-chat",
@@ -117,26 +171,20 @@ def gerar_com_deepseek(prompt, sistema="Você é um programador expert. Responda
         )
         return response.choices[0].message.content, None
     except Exception as e:
-        return None, str(e)
-
-# ====== HEADER ======
-st.markdown("""
-<div class="header-box">
-    <h1>🎮 RYNMARU IA</h1>
-    <p>Gerador de Scripts com DeepSeek</p>
-</div>
-""", unsafe_allow_html=True)
-
-# Status da API
-if st.session_state.api_ok:
-    st.success("✅ API DeepSeek conectada!")
-else:
-    st.error("❌ Problema com a API")
+        erro = str(e)
+        if "401" in erro or "invalid" in erro.lower():
+            return None, "🔑 CHAVE INVÁLIDA! Vá em platform.deepseek.com e crie uma nova API key."
+        elif "402" in erro or "insufficient" in erro.lower():
+            return None, "💰 SEM CRÉDITOS! Adicione saldo na sua conta DeepSeek."
+        elif "429" in erro:
+            return None, "⏳ Muitas requisições! Aguarde 1 minuto."
+        else:
+            return None, f"Erro: {erro}"
 
 # ====== ABAS ======
 tab1, tab2, tab3 = st.tabs(["🤖 Gerar Código", "💬 Chat", "📄 Ver Código"])
 
-# ====== TAB GERAR ======
+# ====== TAB 1: GERAR ======
 with tab1:
     st.markdown("### 🎯 O que você quer criar?")
     
@@ -144,182 +192,139 @@ with tab1:
     
     with col1:
         descricao = st.text_area(
-            "📝 Descreva o que quer:",
-            placeholder="Ex: Um jogo de nave espacial em HTML5 para Android",
+            "📝 Descreva:",
+            placeholder="Ex: Jogo de nave em HTML5 para celular Android",
             height=100
         )
     
     with col2:
-        tipo = st.selectbox(
-            "📦 Tipo:",
-            ["HTML5/JavaScript", "Python", "Godot 4", "Game Guardian", "Unity C#", "Discord Bot"]
-        )
+        tipo = st.selectbox("📦 Tipo:", [
+            "HTML5 / JavaScript",
+            "Python",
+            "Godot 4 (GDScript)",
+            "Game Guardian (Lua)",
+            "Unity C#",
+            "Discord Bot"
+        ])
     
-    # Botão Gerar
     if st.button("⚡ GERAR CÓDIGO", type="primary", use_container_width=True):
         if not descricao:
-            st.error("❌ Digite uma descrição!")
+            st.error("Digite uma descrição!")
         else:
-            with st.spinner("🧠 DeepSeek está gerando..."):
-                sistema = f"""Você é um expert em {tipo}. 
+            with st.spinner("🧠 Gerando com DeepSeek..."):
+                sistema = f"""Você é expert em {tipo}. 
 Crie código COMPLETO e FUNCIONAL.
-Retorne APENAS o código, sem explicações.
-Não use markdown com ```.
-O código deve estar pronto para usar."""
+Retorne APENAS o código sem explicações.
+Não use ``` markdown.
+Código pronto para usar."""
                 
-                resultado, erro = gerar_com_deepseek(descricao, sistema)
+                resultado, erro = gerar(descricao, sistema)
                 
                 if erro:
-                    st.error(f"❌ Erro: {erro}")
-                elif resultado:
-                    # Limpar markdown se houver
-                    codigo = resultado
-                    codigo = re.sub(r'^```[\w]*\n?', '', codigo)
-                    codigo = re.sub(r'\n?```$', '', codigo)
-                    codigo = codigo.strip()
-                    
+                    st.error(erro)
+                    if "CHAVE" in erro or "CRÉDITOS" in erro:
+                        st.markdown("""
+                        ### 🔧 Como resolver:
+                        1. Acesse [platform.deepseek.com](https://platform.deepseek.com/)
+                        2. Vá em **API Keys** e crie uma NOVA chave
+                        3. Verifique se tem créditos em **Billing**
+                        4. Atualize em **Settings > Secrets** no Streamlit
+                        5. Clique **Reboot app**
+                        """)
+                else:
+                    # Limpar markdown
+                    codigo = re.sub(r'^```[\w]*\n?', '', resultado)
+                    codigo = re.sub(r'\n?```$', '', codigo).strip()
                     st.session_state.current_code = codigo
-                    st.success("✅ Código gerado com sucesso!")
+                    st.success("✅ Código gerado!")
                     st.rerun()
     
-    # Mostrar código gerado
+    # Mostrar código
     if st.session_state.current_code:
         st.markdown("---")
-        st.markdown("### 📄 Código Gerado:")
-        st.code(st.session_state.current_code, language="python")
+        st.markdown("### 📄 Código:")
+        st.code(st.session_state.current_code)
         
         col1, col2 = st.columns(2)
         with col1:
             st.download_button(
-                "📥 Baixar Código",
+                "📥 Baixar",
                 st.session_state.current_code,
-                file_name="codigo_rynmaru.txt",
+                "codigo.txt",
                 use_container_width=True
             )
         with col2:
-            if st.button("🗑️ Limpar", use_container_width=True):
+            if st.button("🗑️ Limpar", use_container_width=True, key="limpar1"):
                 st.session_state.current_code = ""
                 st.rerun()
 
-# ====== TAB CHAT ======
+# ====== TAB 2: CHAT ======
 with tab2:
-    st.markdown("### 💬 Converse com a IA")
+    st.markdown("### 💬 Chat com IA")
     
-    # Mostrar histórico
+    # Histórico
     for msg in st.session_state.messages:
         if msg["role"] == "user":
             st.markdown(f'<div class="chat-user">👤 {msg["content"]}</div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="chat-bot">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
     
-    # Input de mensagem
-    mensagem = st.text_input("💭 Digite sua mensagem:", key="chat_input")
+    # Input
+    mensagem = st.text_input("💭 Sua mensagem:", key="msg_input")
     
-    col1, col2 = st.columns([3, 1])
+    col1, col2 = st.columns([4, 1])
     
     with col1:
         if st.button("📤 Enviar", type="primary", use_container_width=True):
             if mensagem:
-                # Adicionar mensagem do usuário
                 st.session_state.messages.append({"role": "user", "content": mensagem})
                 
                 with st.spinner("🧠 Pensando..."):
-                    # Criar contexto
                     contexto = "\n".join([
-                        f"{'Usuário' if m['role']=='user' else 'Assistente'}: {m['content']}"
+                        f"{'User' if m['role']=='user' else 'Bot'}: {m['content']}"
                         for m in st.session_state.messages[-6:]
                     ])
                     
-                    prompt = f"Conversa anterior:\n{contexto}\n\nResponda à última mensagem do usuário de forma útil e em português."
-                    
-                    resposta, erro = gerar_com_deepseek(
-                        prompt,
-                        "Você é Rynmaru, um assistente amigável especializado em programação e jogos. Responda em português de forma clara e útil."
+                    resposta, erro = gerar(
+                        f"Conversa:\n{contexto}\n\nResponda:",
+                        "Você é Rynmaru, assistente de programação. Responda em português, de forma útil e clara."
                     )
                     
-                    if resposta:
-                        st.session_state.messages.append({"role": "assistant", "content": resposta})
-                    else:
+                    if erro:
                         st.session_state.messages.append({"role": "assistant", "content": f"Erro: {erro}"})
+                    else:
+                        st.session_state.messages.append({"role": "assistant", "content": resposta})
                 
                 st.rerun()
-            else:
-                st.warning("Digite uma mensagem!")
     
     with col2:
-        if st.button("🧹 Limpar Chat", use_container_width=True):
+        if st.button("🧹 Limpar", use_container_width=True):
             st.session_state.messages = []
             st.rerun()
 
-# ====== TAB VER CÓDIGO ======
+# ====== TAB 3: VER CÓDIGO ======
 with tab3:
-    st.markdown("### 📄 Editor de Código")
+    st.markdown("### 📄 Editor")
     
     if st.session_state.current_code:
-        # Editor
-        codigo_editado = st.text_area(
-            "✏️ Edite o código:",
-            value=st.session_state.current_code,
-            height=400
-        )
+        codigo = st.text_area("✏️ Código:", st.session_state.current_code, height=400)
         
-        col1, col2, col3 = st.columns(3)
-        
+        col1, col2 = st.columns(2)
         with col1:
-            if st.button("💾 Salvar Edição", use_container_width=True):
-                st.session_state.current_code = codigo_editado
+            if st.button("💾 Salvar", use_container_width=True):
+                st.session_state.current_code = codigo
                 st.success("✅ Salvo!")
-        
         with col2:
-            st.download_button(
-                "📥 Baixar",
-                codigo_editado,
-                file_name="codigo.txt",
-                use_container_width=True
-            )
-        
-        with col3:
-            if st.button("🗑️ Limpar", use_container_width=True):
-                st.session_state.current_code = ""
-                st.rerun()
+            st.download_button("📥 Baixar", codigo, "codigo.txt", use_container_width=True)
     else:
-        st.info("💡 Nenhum código gerado ainda. Vá na aba 'Gerar Código' para criar!")
-        
-        st.markdown("### 🚀 Exemplos de prompts:")
+        st.info("💡 Gere um código na primeira aba!")
         st.markdown("""
-        - "Crie um jogo de snake em HTML5 para celular"
-        - "Script de Game Guardian para hackear moedas"
-        - "Player 2D para Godot 4 com pulo e dash"
-        - "Bot do Discord que responde comandos"
-        - "API REST em Python com Flask"
+        **Exemplos:**
+        - Jogo de snake em HTML5
+        - Script GG para moedas infinitas
+        - Player 2D para Godot 4
+        - Bot Discord com comandos
         """)
 
-# ====== SIDEBAR ======
-with st.sidebar:
-    st.markdown("## 🎮 Rynmaru IA")
-    st.markdown("---")
-    
-    if st.session_state.api_ok:
-        st.success("🟢 API Online")
-    else:
-        st.error("🔴 API Offline")
-    
-    st.markdown("---")
-    st.markdown("### 📊 Status")
-    st.write(f"💬 Mensagens: {len(st.session_state.messages)}")
-    st.write(f"📄 Código: {'Sim' if st.session_state.current_code else 'Não'}")
-    
-    st.markdown("---")
-    st.markdown("### 🔧 Ações")
-    
-    if st.button("🔄 Resetar Tudo", use_container_width=True):
-        st.session_state.messages = []
-        st.session_state.current_code = ""
-        st.rerun()
-    
-    st.markdown("---")
-    st.caption("Powered by DeepSeek 🧠")
-
-# ====== FOOTER ======
 st.markdown("---")
-st.caption("🎮 Rynmaru IA v1.0 | DeepSeek AI")
+st.caption("🎮 Rynmaru IA | DeepSeek 🧠")

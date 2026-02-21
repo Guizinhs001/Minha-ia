@@ -1,6 +1,5 @@
 import streamlit as st
 import requests
-import json
 
 # ====== CONFIG ======
 st.set_page_config(
@@ -46,6 +45,7 @@ st.markdown("""
         color: white !important;
         border: 1px solid #565869 !important;
         border-radius: 8px !important;
+        padding: 1rem !important;
     }
     
     .stButton > button {
@@ -53,6 +53,7 @@ st.markdown("""
         color: white !important;
         border: none !important;
         border-radius: 8px !important;
+        padding: 0.5rem 2rem !important;
     }
     
     .stButton > button:hover {
@@ -85,54 +86,57 @@ if not API_KEY:
 # ====== FUNÇÃO CHAT ======
 def responder(msg):
     try:
-        # Monta histórico
-        mensagens = []
+        # Monta mensagens
+        mensagens = [
+            {"role": "system", "content": "Você é Rynmaru, um assistente amigável. Responda sempre em português."}
+        ]
         
-        # System prompt
-        mensagens.append({
-            "role": "system",
-            "content": "Você é Rynmaru, um assistente amigável e útil. Responda sempre em português brasileiro de forma clara e objetiva."
-        })
-        
-        # Histórico (últimas 10 mensagens)
+        # Adiciona histórico
         for m in st.session_state.msgs[-10:]:
-            mensagens.append({
-                "role": m["role"],
-                "content": m["content"]
-            })
+            mensagens.append({"role": m["role"], "content": m["content"]})
         
-        # Nova mensagem
-        mensagens.append({
-            "role": "user",
-            "content": msg
-        })
+        # Adiciona nova mensagem
+        mensagens.append({"role": "user", "content": msg})
         
-        # Chama API
+        # Tenta diferentes endpoints
+        endpoints = [
+            "https://api.apifreellm.com/v1/chat/completions",
+            "https://apifreellm.com/api/v1/chat/completions",
+            "https://api.apifreellm.com/chat/completions"
+        ]
+        
         headers = {
             "Authorization": f"Bearer {API_KEY}",
             "Content-Type": "application/json"
         }
         
-        data = {
+        payload = {
             "model": "gpt-3.5-turbo",
             "messages": mensagens,
-            "temperature": 0.7,
-            "max_tokens": 2000
+            "max_tokens": 2000,
+            "temperature": 0.7
         }
         
-        response = requests.post(
-            "https://apifreellm.com/v1/chat/completions",
-            headers=headers,
-            json=data,
-            timeout=30
-        )
+        # Tenta cada endpoint
+        for endpoint in endpoints:
+            try:
+                response = requests.post(
+                    endpoint,
+                    headers=headers,
+                    json=payload,
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    return result["choices"][0]["message"]["content"]
+                elif response.status_code != 404:
+                    return f"❌ Erro {response.status_code}: {response.text[:200]}"
+            except:
+                continue
         
-        if response.status_code == 200:
-            result = response.json()
-            return result["choices"][0]["message"]["content"]
-        else:
-            return f"❌ Erro {response.status_code}: {response.text}"
-            
+        return "❌ Não consegui conectar à API. Verifique se a chave está correta em apifreellm.com"
+        
     except Exception as e:
         return f"❌ Erro: {str(e)}"
 
@@ -141,14 +145,35 @@ with st.sidebar:
     st.markdown("## 🤖 Rynmaru IA")
     st.markdown("---")
     
+    # Teste de API
+    if st.button("🔧 Testar API", use_container_width=True):
+        with st.spinner("Testando..."):
+            teste = responder("Diga apenas: OK")
+            if "OK" in teste or "ok" in teste:
+                st.success("✅ API funcionando!")
+            else:
+                st.error(teste)
+    
     if st.button("🗑️ Nova Conversa", use_container_width=True):
         st.session_state.msgs = []
         st.rerun()
     
     st.markdown("---")
     st.write(f"💬 {len(st.session_state.msgs)} mensagens")
+    
     st.markdown("---")
     st.caption("API Free LLM 🆓")
+    
+    with st.expander("ℹ️ Sobre a API"):
+        st.markdown("""
+        Verifique sua chave em:
+        [apifreellm.com](https://apifreellm.com/en/api-access)
+        
+        Certifique-se de que:
+        - A chave está ativa
+        - Você tem créditos
+        - Discord está vinculado
+        """)
 
 # ====== TÍTULO ======
 st.markdown('<h1 class="title">🤖 Rynmaru IA</h1>', unsafe_allow_html=True)
@@ -166,7 +191,12 @@ st.markdown("---")
 col1, col2 = st.columns([5, 1])
 
 with col1:
-    texto = st.text_input("Msg", placeholder="Digite sua mensagem...", label_visibility="collapsed", key="input")
+    texto = st.text_input(
+        "Msg",
+        placeholder="Digite sua mensagem...",
+        label_visibility="collapsed",
+        key="input"
+    )
 
 with col2:
     enviar = st.button("➤", type="primary", use_container_width=True)
@@ -185,9 +215,13 @@ if enviar and texto:
 if not st.session_state.msgs:
     st.markdown("""
     <div class="welcome">
-        <p>👋 Olá! Sou o <b>Rynmaru</b></p>
-        <p>Seu assistente de IA gratuito!</p>
+        <h2>👋 Olá! Sou o Rynmaru</h2>
+        <p>Seu assistente de IA gratuito</p>
         <br>
         <p>💡 Pergunte qualquer coisa...</p>
+        <br>
+        <p style="font-size: 0.9rem; color: #6b7280;">
+        Clique em "🔧 Testar API" na barra lateral para verificar a conexão
+        </p>
     </div>
     """, unsafe_allow_html=True)
